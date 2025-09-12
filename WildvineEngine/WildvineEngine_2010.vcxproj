@@ -423,6 +423,8 @@
   </ItemDefinitionGroup>
   <ItemGroup />
   <ItemGroup>
+    <ClCompile Include="source\Device.cpp" />
+    <ClCompile Include="source\DeviceContext.cpp" />
     <ClCompile Include="source\Window.cpp" />
     <ClCompile Include="WildvineEngine.cpp" />
   </ItemGroup>
@@ -430,6 +432,8 @@
     <None Include="WildvineEngine.fx" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Device.h" />
+    <ClInclude Include="include\DeviceContext.h" />
     <ClInclude Include="include\Prerequisites.h" />
     <ClInclude Include="include\Window.h" />
     <CLInclude Include="resource.h" />
