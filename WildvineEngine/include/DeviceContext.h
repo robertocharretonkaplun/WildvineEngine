@@ -248,7 +248,7 @@ public:
   DrawIndexed(unsigned int IndexCount,
               unsigned int StartIndexLocation,
               int BaseVertexLocation);
-private:
+public:
   /**
    * @brief Puntero al contexto inmediato de Direct3D 11.
    * @details Válido tras init(); liberado en destroy().
