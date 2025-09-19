@@ -425,6 +425,7 @@
   <ItemGroup>
     <ClCompile Include="source\Device.cpp" />
     <ClCompile Include="source\DeviceContext.cpp" />
+    <ClCompile Include="source\SwapChain.cpp" />
     <ClCompile Include="source\Texture.cpp" />
     <ClCompile Include="source\Window.cpp" />
     <ClCompile Include="WildvineEngine.cpp" />

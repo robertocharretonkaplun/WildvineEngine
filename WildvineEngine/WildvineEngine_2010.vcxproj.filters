@@ -35,6 +35,9 @@
     <ClCompile Include="source\Texture.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\SwapChain.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="WildvineEngine.fx">
