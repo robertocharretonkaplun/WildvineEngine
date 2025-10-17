@@ -15,6 +15,8 @@
 #include "DepthStencilView.h"
 #include "Viewport.h"
 #include "ShaderProgram.h"
+#include "MeshComponent.h"
+#include "Buffer.h"
 //--------------------------------------------------------------------------------------
 // Global Variables
 //--------------------------------------------------------------------------------------
@@ -29,27 +31,30 @@ Texture                             g_depthStencil;
 DepthStencilView									  g_depthStencilView;
 Viewport                            g_viewport;
 ShaderProgram												g_shaderProgram;
+MeshComponent												g_mesh;
+Buffer															g_vertexBuffer;
+Buffer															g_indexBuffer;
+Buffer															g_cbNeverChanges;
+Buffer															g_cbChangeOnResize;
+Buffer															g_cbChangesEveryFrame;
+Texture 														g_textureCube;
 
-
-ID3D11Buffer* g_pVertexBuffer = NULL;
-ID3D11Buffer* g_pIndexBuffer = NULL;
-ID3D11Buffer* g_pCBNeverChanges = NULL;
-ID3D11Buffer* g_pCBChangeOnResize = NULL;
-ID3D11Buffer* g_pCBChangesEveryFrame = NULL;
-ID3D11ShaderResourceView* g_pTextureRV = NULL;
 ID3D11SamplerState* g_pSamplerLinear = NULL;
 XMMATRIX                            g_World;
 XMMATRIX                            g_View;
 XMMATRIX                            g_Projection;
 XMFLOAT4                            g_vMeshColor(0.7f, 0.7f, 0.7f, 1.0f);
 
-
+CBChangeOnResize cbChangesOnResize;
+CBNeverChanges cbNeverChanges;
+CBChangesEveryFrame cb;
 //--------------------------------------------------------------------------------------
 // Forward declarations
 //--------------------------------------------------------------------------------------
 HRESULT InitDevice();
 void CleanupDevice();
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+void update();
 void Render();
 
 
@@ -82,6 +87,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 		else
 		{
+			update();
 			Render();
 		}
 	}
@@ -221,27 +227,7 @@ HRESULT InitDevice()
 			{ XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
 	};
 
-	D3D11_BUFFER_DESC bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(SimpleVertex) * 24;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA InitData;
-	ZeroMemory(&InitData, sizeof(InitData));
-	InitData.pSysMem = vertices;
-	hr = g_device.m_device->CreateBuffer(&bd, &InitData, &g_pVertexBuffer);
-	if (FAILED(hr))
-		return hr;
-
-	// Set vertex buffer
-	UINT stride = sizeof(SimpleVertex);
-	UINT offset = 0;
-	g_deviceContext.IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
-
-	// Create index buffer
-	// Create vertex buffer
-	WORD indices[] =
+	unsigned int indices[] =
 	{
 			3,1,0,
 			2,1,3,
@@ -262,44 +248,68 @@ HRESULT InitDevice()
 			23,20,22
 	};
 
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(WORD) * 36;
-	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	InitData.pSysMem = indices;
-	hr = g_device.m_device->CreateBuffer(&bd, &InitData, &g_pIndexBuffer);
-	if (FAILED(hr))
-		return hr;
+	// Integrar los vertices a meshcomponent
+	for (unsigned int i = 0; i < 24; i++) {
+		g_mesh.m_vertex.push_back(vertices[i]);
+	}
+	g_mesh.m_numVertex = 24;
 
-	// Set index buffer
-	g_deviceContext.IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	// Integrar los indices a meshcomponent
+	for (unsigned int i = 0; i < 36; i++) {
+		g_mesh.m_index.push_back(indices[i]);
+	}
+	g_mesh.m_numIndex = 36;
+
+	// Create vertex buffer
+	hr = g_vertexBuffer.init(g_device, g_mesh, D3D11_BIND_VERTEX_BUFFER);
+
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize VertexBuffer. HRESULT: " + std::to_string(hr)).c_str());
+		return hr;
+	}
+
+	// Create index buffer
+	hr = g_indexBuffer.init(g_device, g_mesh, D3D11_BIND_INDEX_BUFFER);
+
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize IndexBuffer. HRESULT: " + std::to_string(hr)).c_str());
+		return hr;
+	}
 
 	// Set primitive topology
 	g_deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Create the constant buffers
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(CBNeverChanges);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = 0;
-	hr = g_device.m_device->CreateBuffer(&bd, NULL, &g_pCBNeverChanges);
-	if (FAILED(hr))
+	hr = g_cbNeverChanges.init(g_device, sizeof(CBNeverChanges));
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize NeverChanges Buffer. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
+	}
 
-	bd.ByteWidth = sizeof(CBChangeOnResize);
-	hr = g_device.m_device->CreateBuffer(&bd, NULL, &g_pCBChangeOnResize);
-	if (FAILED(hr))
+	hr = g_cbChangeOnResize.init(g_device, sizeof(CBChangeOnResize));
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize ChangeOnResize Buffer. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
+	}
 
-	bd.ByteWidth = sizeof(CBChangesEveryFrame);
-	hr = g_device.m_device->CreateBuffer(&bd, NULL, &g_pCBChangesEveryFrame);
-	if (FAILED(hr))
+	hr = g_cbChangesEveryFrame.init(g_device, sizeof(CBChangesEveryFrame));
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize ChangesEveryFrame Buffer. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
+	}
 
+	hr = g_textureCube.init(g_device, "seafloor", ExtensionType::DDS);
 	// Load the Texture
-	hr = D3DX11CreateShaderResourceViewFromFile(g_device.m_device, "seafloor.dds", NULL, NULL, &g_pTextureRV, NULL);
-	if (FAILED(hr))
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize texture Cube. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
+	}
 
 	// Create the sample state
 	D3D11_SAMPLER_DESC sampDesc;
@@ -324,16 +334,11 @@ HRESULT InitDevice()
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	g_View = XMMatrixLookAtLH(Eye, At, Up);
 
-	CBNeverChanges cbNeverChanges;
-	cbNeverChanges.mView = XMMatrixTranspose(g_View);
-	g_deviceContext.UpdateSubresource(g_pCBNeverChanges, 0, NULL, &cbNeverChanges, 0, 0);
-
+	
 	// Initialize the projection matrix
+	cbNeverChanges.mView = XMMatrixTranspose(g_View);
 	g_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4, g_window.m_width / (FLOAT)g_window.m_height, 0.01f, 100.0f);
-
-	CBChangeOnResize cbChangesOnResize;
 	cbChangesOnResize.mProjection = XMMatrixTranspose(g_Projection);
-	g_deviceContext.UpdateSubresource(g_pCBChangeOnResize, 0, NULL, &cbChangesOnResize, 0, 0);
 
 	return S_OK;
 }
@@ -347,12 +352,14 @@ void CleanupDevice()
 	if (g_deviceContext.m_deviceContext) g_deviceContext.m_deviceContext->ClearState();
 
 	if (g_pSamplerLinear) g_pSamplerLinear->Release();
-	if (g_pTextureRV) g_pTextureRV->Release();
-	if (g_pCBNeverChanges) g_pCBNeverChanges->Release();
-	if (g_pCBChangeOnResize) g_pCBChangeOnResize->Release();
-	if (g_pCBChangesEveryFrame) g_pCBChangesEveryFrame->Release();
-	if (g_pVertexBuffer) g_pVertexBuffer->Release();
-	if (g_pIndexBuffer) g_pIndexBuffer->Release();
+	//if (g_pTextureRV) g_pTextureRV->Release();
+	g_textureCube.destroy();
+
+	g_cbNeverChanges.destroy();
+	g_cbChangeOnResize.destroy();
+	g_cbChangesEveryFrame.destroy();
+	g_vertexBuffer.destroy();
+	g_indexBuffer.destroy();
 	g_shaderProgram.destroy();
 	g_depthStencil.destroy();
 	g_depthStencilView.destroy();
@@ -390,11 +397,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-
-//--------------------------------------------------------------------------------------
-// Render a frame
-//--------------------------------------------------------------------------------------
-void Render()
+void 
+update()
 {
 	// Update our time
 	static float t = 0.0f;
@@ -410,15 +414,30 @@ void Render()
 			dwTimeStart = dwTimeCur;
 		t = (dwTimeCur - dwTimeStart) / 1000.0f;
 	}
-
-	// Rotate cube around the origin
-	g_World = XMMatrixRotationY(t);
-
+	// Actualizar la matriz de proyección y vista
+	cbNeverChanges.mView = XMMatrixTranspose(g_View);
+	g_cbNeverChanges.update(g_deviceContext, nullptr, 0, nullptr, &cbNeverChanges, 0, 0);
+	g_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4, g_window.m_width / (FLOAT)g_window.m_height, 0.01f, 100.0f);
+	cbChangesOnResize.mProjection = XMMatrixTranspose(g_Projection);
+	g_cbChangeOnResize.update(g_deviceContext, nullptr, 0, nullptr, &cbChangesOnResize, 0, 0);
+	
 	// Modify the color
 	g_vMeshColor.x = (sinf(t * 1.0f) + 1.0f) * 0.5f;
 	g_vMeshColor.y = (cosf(t * 3.0f) + 1.0f) * 0.5f;
 	g_vMeshColor.z = (sinf(t * 5.0f) + 1.0f) * 0.5f;
 
+	// Rotate cube around the origin
+	g_World = XMMatrixRotationY(t);
+	cb.mWorld = XMMatrixTranspose(g_World);
+	cb.vMeshColor = g_vMeshColor;
+	g_cbChangesEveryFrame.update(g_deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
+}
+
+//--------------------------------------------------------------------------------------
+// Render a frame
+//--------------------------------------------------------------------------------------
+void Render()
+{
 	// Set Render Target View
 	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	g_renderTargetView.render(g_deviceContext, g_depthStencilView, 1, ClearColor);
@@ -431,29 +450,24 @@ void Render()
 
 	// Set shader program
 	g_shaderProgram.render(g_deviceContext);
-	//
-	// Update variables that change once per frame
-	//
-	CBChangesEveryFrame cb;
-	cb.mWorld = XMMatrixTranspose(g_World);
-	cb.vMeshColor = g_vMeshColor;
-	g_deviceContext.UpdateSubresource(g_pCBChangesEveryFrame, 0, NULL, &cb, 0, 0);
-
-	//
-	// Render the cube
-	//
 	
-	g_deviceContext.VSSetConstantBuffers(0, 1, &g_pCBNeverChanges);
-	g_deviceContext.VSSetConstantBuffers(1, 1, &g_pCBChangeOnResize);
-	g_deviceContext.VSSetConstantBuffers(2, 1, &g_pCBChangesEveryFrame);
-	g_deviceContext.PSSetConstantBuffers(2, 1, &g_pCBChangesEveryFrame);
-	g_deviceContext.PSSetShaderResources(0, 1, &g_pTextureRV);
-	g_deviceContext.PSSetSamplers(0, 1, &g_pSamplerLinear);
-	g_deviceContext.DrawIndexed(36, 0, 0);
+	// Render the cube
+	 // Asignar buffers Vertex e Index
+	g_vertexBuffer.render(g_deviceContext, 0, 1);
+	g_indexBuffer.render(g_deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
 
-	//
+	// Asignar buffers constantes
+	g_cbNeverChanges.render(g_deviceContext, 0, 1);
+	g_cbChangeOnResize.render(g_deviceContext, 1, 1);
+	g_cbChangesEveryFrame.render(g_deviceContext, 2, 1);
+	g_cbChangesEveryFrame.render(g_deviceContext, 2, 1, true);
+
+	// Asignar textura y sampler
+	//g_deviceContext.PSSetShaderResources(0, 1, &g_pTextureRV);
+	g_textureCube.render(g_deviceContext, 0, 1);
+	g_deviceContext.PSSetSamplers(0, 1, &g_pSamplerLinear);
+	g_deviceContext.DrawIndexed(g_mesh.m_numIndex, 0, 0);
+
 	// Present our back buffer to our front buffer
-	//
 	g_swapChain.present();
-	//g_pSwapChain->Present( 0, 0 );
 }
