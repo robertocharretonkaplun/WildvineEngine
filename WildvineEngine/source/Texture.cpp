@@ -20,6 +20,7 @@ Texture::init(Device& device,
 	switch (extensionType) {
 	case DDS: {
 		m_textureName = textureName + ".dds";
+
 		// Cargar textura DDS
 		hr = D3DX11CreateShaderResourceViewFromFile(
 			device.m_device,

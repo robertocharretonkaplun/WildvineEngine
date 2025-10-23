@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "Device.h"
+#include "BaseApp.h"
 
 HRESULT 
 Window::init(HINSTANCE hInstance, int nCmdShow, WNDPROC wndproc) {
@@ -63,7 +64,7 @@ void
 Window::update() {
 }
 
-void 
+void
 Window::render() {
 }
 

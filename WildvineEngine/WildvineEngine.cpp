@@ -17,6 +17,7 @@
 #include "ShaderProgram.h"
 #include "MeshComponent.h"
 #include "Buffer.h"
+#include "SamplerState.h"
 //--------------------------------------------------------------------------------------
 // Global Variables
 //--------------------------------------------------------------------------------------
@@ -38,8 +39,8 @@ Buffer															g_cbNeverChanges;
 Buffer															g_cbChangeOnResize;
 Buffer															g_cbChangesEveryFrame;
 Texture 														g_textureCube;
+SamplerState												g_samplerState;
 
-ID3D11SamplerState* g_pSamplerLinear = NULL;
 XMMATRIX                            g_World;
 XMMATRIX                            g_View;
 XMMATRIX                            g_Projection;
@@ -96,8 +97,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	return (int)msg.wParam;
 }
-
-
 
 //--------------------------------------------------------------------------------------
 // Create Direct3D device and swap chain
@@ -312,18 +311,12 @@ HRESULT InitDevice()
 	}
 
 	// Create the sample state
-	D3D11_SAMPLER_DESC sampDesc;
-	ZeroMemory(&sampDesc, sizeof(sampDesc));
-	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	sampDesc.MinLOD = 0;
-	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	hr = g_device.m_device->CreateSamplerState(&sampDesc, &g_pSamplerLinear);
-	if (FAILED(hr))
+	hr = g_samplerState.init(g_device);
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize SamplerState. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
+	}
 
 	// Initialize the world matrices
 	g_World = XMMatrixIdentity();
@@ -351,8 +344,7 @@ void CleanupDevice()
 {
 	if (g_deviceContext.m_deviceContext) g_deviceContext.m_deviceContext->ClearState();
 
-	if (g_pSamplerLinear) g_pSamplerLinear->Release();
-	//if (g_pTextureRV) g_pTextureRV->Release();
+	g_samplerState.destroy();
 	g_textureCube.destroy();
 
 	g_cbNeverChanges.destroy();
@@ -463,9 +455,8 @@ void Render()
 	g_cbChangesEveryFrame.render(g_deviceContext, 2, 1, true);
 
 	// Asignar textura y sampler
-	//g_deviceContext.PSSetShaderResources(0, 1, &g_pTextureRV);
 	g_textureCube.render(g_deviceContext, 0, 1);
-	g_deviceContext.PSSetSamplers(0, 1, &g_pSamplerLinear);
+	g_samplerState.render(g_deviceContext, 0, 1);
 	g_deviceContext.DrawIndexed(g_mesh.m_numIndex, 0, 0);
 
 	// Present our back buffer to our front buffer
