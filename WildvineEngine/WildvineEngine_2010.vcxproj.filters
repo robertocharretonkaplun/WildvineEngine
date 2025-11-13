@@ -120,6 +120,9 @@
     <ClInclude Include="include\BaseApp.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\stb_image.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

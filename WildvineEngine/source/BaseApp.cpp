@@ -1,9 +1,5 @@
 #include "BaseApp.h"
 
-BaseApp::BaseApp(HINSTANCE hInst, int nCmdShow)
-{
-}
-
 int 
 BaseApp::run(HINSTANCE hInst, int nCmdShow) {
   if (FAILED(m_window.init(hInst, nCmdShow, WndProc))) {
@@ -237,7 +233,7 @@ BaseApp::init() {
 		return hr;
 	}
 
-	hr = m_textureCube.init(m_device, "seafloor", ExtensionType::DDS);
+	hr = m_textureCube.init(m_device, "Cracked2", ExtensionType::PNG);
 	// Load the Texture
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
@@ -295,10 +291,9 @@ void BaseApp::update(float deltaTime)
 	m_cbChangeOnResize.update(m_deviceContext, nullptr, 0, nullptr, &cbChangesOnResize, 0, 0);
 
 	// Modify the color
-	m_vMeshColor.x = (sinf(t * 1.0f) + 1.0f) * 0.5f;
-	m_vMeshColor.y = (cosf(t * 3.0f) + 1.0f) * 0.5f;
-	m_vMeshColor.z = (sinf(t * 5.0f) + 1.0f) * 0.5f;
-
+	m_vMeshColor.x = 1.0f;
+	m_vMeshColor.y = 1.0f;
+	m_vMeshColor.z = 1.0f;
 	// Rotate cube around the origin
 	m_World = XMMatrixRotationY(t);
 	cb.mWorld = XMMatrixTranspose(m_World);

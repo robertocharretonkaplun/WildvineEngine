@@ -16,7 +16,7 @@
 class 
 BaseApp {
 public:
-	BaseApp(HINSTANCE hInst, int nCmdShow);
+	BaseApp() = default;
 	~BaseApp() { destroy(); }
 
 	int 
