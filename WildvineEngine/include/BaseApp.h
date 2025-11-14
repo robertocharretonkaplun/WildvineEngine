@@ -12,6 +12,7 @@
 #include "MeshComponent.h"
 #include "Buffer.h"
 #include "SamplerState.h"
+#include "ModelLoader.h"
 
 class 
 BaseApp {
