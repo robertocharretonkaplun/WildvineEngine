@@ -21,7 +21,13 @@ ResourceState {
 
 class IResource {
 public:
-	IResource(const std::string& name) : m_name(name) {}
+	IResource(const std::string& name)
+		: m_name(name)
+		, m_filePath("")
+		, m_type(ResourceType::Unknown)
+		, m_state(ResourceState::Unloaded)
+		, m_id(GenerateID())
+	{	}
 	virtual ~IResource() = default;
 
 	// Crear recurso GPU
@@ -32,6 +38,11 @@ public:
 	virtual void unload() = 0;
 	// Para profiler
 	virtual size_t getSizeInBytes() const = 0;
+
+	void SetPath(const std::string& path) { m_filePath = path; }
+	void SetType(ResourceType t) { m_type = t; }
+	void SetState(ResourceState s) { m_state = s; }
+
 
 	const std::string& GetName() const { return m_name; }
 	const std::string& GetPath() const { return m_filePath; }

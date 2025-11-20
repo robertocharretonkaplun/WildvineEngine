@@ -1,5 +1,5 @@
 #include "BaseApp.h"
-
+#include "ResourceManager.h"
 int 
 BaseApp::run(HINSTANCE hInst, int nCmdShow) {
   if (FAILED(m_window.init(hInst, nCmdShow, WndProc))) {
@@ -123,75 +123,12 @@ BaseApp::init() {
 		return hr;
 	}
 
-	// Create vertex buffer
-	SimpleVertex vertices[] =
-	{
-			{ XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+	m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
+	TRex = m_model->GetMeshes();
 
-			{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-
-			{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-
-			{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-
-			{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
-
-			{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-			{ XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-			{ XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-	};
-
-	unsigned int indices[] =
-	{
-			3,1,0,
-			2,1,3,
-
-			6,4,5,
-			7,4,6,
-
-			11,9,8,
-			10,9,11,
-
-			14,12,13,
-			15,12,14,
-
-			19,17,16,
-			18,17,19,
-
-			22,20,21,
-			23,20,22
-	};
-
-	// Integrar los vertices a meshcomponent
-	for (unsigned int i = 0; i < 24; i++) {
-		m_mesh.m_vertex.push_back(vertices[i]);
-	}
-	m_mesh.m_numVertex = 24;
-
-	// Integrar los indices a meshcomponent
-	for (unsigned int i = 0; i < 36; i++) {
-		m_mesh.m_index.push_back(indices[i]);
-	}
-	m_mesh.m_numIndex = 36;
 
 	// Create vertex buffer
-	hr = m_vertexBuffer.init(m_device, m_mesh, D3D11_BIND_VERTEX_BUFFER);
+	hr = m_vertexBuffer.init(m_device, TRex[0], D3D11_BIND_VERTEX_BUFFER);
 
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
@@ -200,13 +137,17 @@ BaseApp::init() {
 	}
 
 	// Create index buffer
-	hr = m_indexBuffer.init(m_device, m_mesh, D3D11_BIND_INDEX_BUFFER);
+	hr = m_indexBuffer.init(m_device, TRex[0], D3D11_BIND_INDEX_BUFFER);
 
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
 			("Failed to initialize IndexBuffer. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
+
+	auto& resourceMan = ResourceManager::getInstance();
+
+	std::shared_ptr<Model3D> model = resourceMan.GetOrLoad<Model3D>("CubeModel", "CyberGun.fbx", ModelType::FBX);
 
 	// Set primitive topology
 	m_deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -295,7 +236,15 @@ void BaseApp::update(float deltaTime)
 	m_vMeshColor.y = 1.0f;
 	m_vMeshColor.z = 1.0f;
 	// Rotate cube around the origin
-	m_World = XMMatrixRotationY(t);
+	// Aplicar escala
+	XMMATRIX scaleMatrix = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+	// Aplicar rotacion
+	XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(-0.60f, 3.0f, -0.20f);
+	// Aplicar traslacion
+	XMMATRIX translationMatrix = XMMatrixTranslation(2.0f, -4.9f, 11.0f);
+
+	// Componer la matriz final en el orden: scale -> rotation -> translation
+	m_World = scaleMatrix * rotationMatrix * translationMatrix;
 	cb.mWorld = XMMatrixTranspose(m_World);
 	cb.vMeshColor = m_vMeshColor;
 	m_cbChangesEveryFrame.update(m_deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
@@ -330,7 +279,7 @@ BaseApp::render() {
 	// Asignar textura y sampler
 	m_textureCube.render(m_deviceContext, 0, 1);
 	m_samplerState.render(m_deviceContext, 0, 1);
-	m_deviceContext.DrawIndexed(m_mesh.m_numIndex, 0, 0);
+	m_deviceContext.DrawIndexed(TRex[0].m_numIndex, 0, 0);
 
 	// Present our back buffer to our front buffer
 	m_swapChain.present();

@@ -6,6 +6,9 @@
 #include <windows.h>
 #include <xnamath.h>
 #include <thread>
+#include <memory>
+#include <unordered_map>
+#include <type_traits>
 
 // Librerias DirectX
 #include <d3d11.h>

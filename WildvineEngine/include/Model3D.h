@@ -13,7 +13,12 @@ ModelType {
 class 
 Model3D : public IResource {
 public:
-	Model3D(const std::string& name, ModelType modelType);
+	Model3D(const std::string& name, ModelType modelType) 
+	: IResource(name), m_modelType(modelType), lSdkManager(nullptr), lScene(nullptr) {
+		SetType(ResourceType::Model3D);
+		load(name);
+	}
+
 	~Model3D() = default;
 
 	bool 
