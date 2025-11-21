@@ -147,7 +147,7 @@ BaseApp::init() {
 
 	auto& resourceMan = ResourceManager::getInstance();
 
-	std::shared_ptr<Model3D> model = resourceMan.GetOrLoad<Model3D>("CubeModel", "CyberGun.fbx", ModelType::FBX);
+	//std::shared_ptr<Model3D> model = resourceMan.GetOrLoad<Model3D>("CubeModel", "CyberGun.fbx", ModelType::FBX);
 
 	// Set primitive topology
 	m_deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -174,7 +174,7 @@ BaseApp::init() {
 		return hr;
 	}
 
-	hr = m_textureCube.init(m_device, "Cracked2", ExtensionType::PNG);
+	hr = m_textureCube.init(m_device, "base.tga", ExtensionType::PNG);
 	// Load the Texture
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
