@@ -24,6 +24,15 @@
     <Filter Include="include\Utilities">
       <UniqueIdentifier>{b0959de9-691b-4627-b014-66a2960f8209}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\ECS">
+      <UniqueIdentifier>{0f4fbcd6-e266-4ed5-a948-ea0a207e485c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Utilities\Memory">
+      <UniqueIdentifier>{759a5de3-beae-4458-a20d-b7f5d81d0fa2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Utilities\Vector">
+      <UniqueIdentifier>{5228384e-570a-4737-836f-626ba3f1f6f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WildvineEngine.cpp">
@@ -87,9 +96,6 @@
     <ClInclude Include="include\Window.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prerequisites.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\Device.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -120,25 +126,58 @@
     <ClInclude Include="include\Buffer.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\MeshComponent.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\SamplerState.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\BaseApp.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\stb_image.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Model3D.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\IResource.h">
       <Filter>include\Patterns</Filter>
     </ClInclude>
     <ClInclude Include="include\ResourceManager.h">
+      <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Component.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Entity.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stb_image.h">
+      <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MeshComponent.h">
+      <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Prerequisites.h">
+      <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Model3D.h">
+      <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Memory\TSharedPointer.h">
+      <Filter>include\Utilities\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Memory\TStaticPtr.h">
+      <Filter>include\Utilities\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Memory\TUniquePtr.h">
+      <Filter>include\Utilities\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Memory\TWeakPointer.h">
+      <Filter>include\Utilities\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Vectors\Vector2.h">
+      <Filter>include\Utilities\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Vectors\Vector3.h">
+      <Filter>include\Utilities\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Vectors\Vector4.h">
+      <Filter>include\Utilities\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Utilities\EngineMath.h">
       <Filter>include\Utilities</Filter>
     </ClInclude>
   </ItemGroup>
