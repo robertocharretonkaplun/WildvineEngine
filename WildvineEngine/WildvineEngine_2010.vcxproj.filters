@@ -33,6 +33,9 @@
     <Filter Include="include\Utilities\Vector">
       <UniqueIdentifier>{5228384e-570a-4737-836f-626ba3f1f6f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\ECS">
+      <UniqueIdentifier>{1b1555f7-210e-4cdd-9ec0-bdb785b4d710}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WildvineEngine.cpp">
@@ -79,6 +82,9 @@
     </ClCompile>
     <ClCompile Include="source\Model3D.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ECS\Actor.cpp">
+      <Filter>source\ECS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -179,6 +185,12 @@
     </ClInclude>
     <ClInclude Include="include\EngineUtilities\Utilities\EngineMath.h">
       <Filter>include\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Actor.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Transform.h">
+      <Filter>include\ECS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
