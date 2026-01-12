@@ -15,11 +15,15 @@
 #include "Model3D.h"
 #include "ECS/Actor.h"
 
+
 class 
 BaseApp {
 public:
 	BaseApp() = default;
 	~BaseApp() { destroy(); }
+
+	HRESULT
+	awake();
 
 	int 
 	run(HINSTANCE hInst, int nCmdShow);

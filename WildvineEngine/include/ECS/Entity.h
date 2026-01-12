@@ -15,6 +15,9 @@ public:
   virtual
   ~Entity() = default;
 
+  virtual void
+  awake() = 0;
+
   /**
    * @brief Initialize the entity with a device context.
    * @param deviceContext The device context to initialize with.
