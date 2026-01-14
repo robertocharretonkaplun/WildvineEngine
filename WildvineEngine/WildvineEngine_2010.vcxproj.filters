@@ -36,6 +36,15 @@
     <Filter Include="source\ECS">
       <UniqueIdentifier>{1b1555f7-210e-4cdd-9ec0-bdb785b4d710}</UniqueIdentifier>
     </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{31617e8d-26f5-44ec-9445-10c4297bae00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\include">
+      <UniqueIdentifier>{6d3ce91f-a80e-4bc0-8eff-e438f7a72b05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\source">
+      <UniqueIdentifier>{566a4c35-d234-491b-b7f1-a77bbe20c916}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WildvineEngine.cpp">
@@ -85,6 +94,33 @@
     </ClCompile>
     <ClCompile Include="source\ECS\Actor.cpp">
       <Filter>source\ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GUI\GUI.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_demo.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_draw.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_tables.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_widgets.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\backends\imgui_impl_dx11.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\imgui-docking-znly-docking\backends\imgui_impl_win32.cpp">
+      <Filter>imgui\source</Filter>
+    </ClCompile>
+    <ClCompile Include="Imgui\ImGuizmo\ImGuizmo.cpp">
+      <Filter>imgui\source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -191,6 +227,36 @@
     </ClInclude>
     <ClInclude Include="include\ECS\Transform.h">
       <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\GUI\GUI.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imconfig.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imgui.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imgui_internal.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imstb_rectpack.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imstb_textedit.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\imstb_truetype.h">
+      <Filter>imgui\include</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\backends\imgui_impl_dx11.h">
+      <Filter>imgui\source</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\imgui-docking-znly-docking\backends\imgui_impl_win32.h">
+      <Filter>imgui\source</Filter>
+    </ClInclude>
+    <ClInclude Include="Imgui\ImGuizmo\ImGuizmo.h">
+      <Filter>imgui\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
