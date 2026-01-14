@@ -417,62 +417,84 @@ GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 	ImGui::End();
 }
 
-void 
+void
 GUI::editTransform(const XMMATRIX& view, const XMMATRIX& projection, EU::TSharedPointer<Actor> actor)
 {
-	// 1) Establecer modo y operación del gizmo
-	//
 	static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
-	
-	// 2) Atajos de teclado para cambiar operación
-	//if (ImGui::IsKeyPressed(ImGuiKey_T)) mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-	//if (ImGui::IsKeyPressed(ImGuiKey_R)) mCurrentGizmoOperation = ImGuizmo::ROTATE;
-	//if (ImGui::IsKeyPressed(ImGuiKey_S)) mCurrentGizmoOperation = ImGuizmo::SCALE;
-
-	// 3) Obtener referencias al componente
 	auto transform = actor->getComponent<Transform>();
+
+	// 1) OBTENER COMPONENTES (Asegúrate de que sean float[3])
 	float* pos = const_cast<float*>(transform->getPosition().data());
-	float* rot = const_cast<float*>(transform->getRotation().data()); // Asegúrate que sean grados
+	float* rot = const_cast<float*>(transform->getRotation().data());
 	float* sca = const_cast<float*>(transform->getScale().data());
 
-	// 4) Crear la matriz del objeto para ImGuizmo (DirectX a arrays de float[16])
+	// 2) CREAR MATRIZ PARA IMGUIZMO 
+	// Importante: No uses la matriz de DirectX aquí. 
+	// Deja que ImGuizmo cree su propia matriz temporal en su formato preferido.
 	float mArr[16];
 	ImGuizmo::RecomposeMatrixFromComponents(pos, rot, sca, mArr);
 
-	// 5) Configurar matrices de Cámara (convertir de DirectXMath)
+	// 3) PREPARAR MATRICES DE CÁMARA (Transponer para que ImGuizmo las entienda)
 	float vArr[16], pArr[16];
+	// Probar SIN transponer primero
 	XMStoreFloat4x4((XMFLOAT4X4*)vArr, view);
 	XMStoreFloat4x4((XMFLOAT4X4*)pArr, projection);
-	XMStoreFloat4x4((XMFLOAT4X4*)mArr, transform.get()->matrix);
 
-	// 6) Dibujar Gizmo
+	// 4) CONFIGURAR RECT (Asegúrate de que esto se llame)
+	ImGuiIO& io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+
+	// 5) DIBUJAR GIZMO
 	ImGuizmo::SetID(0);
+	ImGuizmo::SetGizmoSizeClipSpace(0.15f);
+	// Define cuánto quieres que "salte" la rotación (ejemplo: 15 grados)
+	float snapValue = 25.0f;
+	if (mCurrentGizmoOperation == ImGuizmo::ROTATE) snapValue = 5.0f;
+	if (mCurrentGizmoOperation == ImGuizmo::TRANSLATE) snapValue = 0.5f;
+
+	// Crea un array de snap
+	float snap[3] = { snapValue, snapValue, snapValue };
+
+	// Usa la versión de Manipulate que acepta snap (es el último parámetro)
+	// Si mantienes presionada una tecla (ej. CTRL), aplicas el snap
+	bool useSnap = ImGui::GetIO().KeyCtrl;
+
+	ImGuizmo::Manipulate(
+		vArr, pArr,
+		mCurrentGizmoOperation,
+		mCurrentGizmoMode,
+		mArr,
+		NULL,
+		useSnap ? snap : NULL // Aquí pasas el snap si se desea
+	);
+
+	// mCurrentGizmoOperation debe venir de tu Toolbar (TRANSLATE, ROTATE o SCALE)
 	ImGuizmo::Manipulate(vArr, pArr, mCurrentGizmoOperation, mCurrentGizmoMode, mArr);
 
-	// Si el usuario movió el gizmo, actualizar la matriz original
+	// 6) SI SE ESTÁ USANDO, ACTUALIZAR ACTOR
 	if (ImGuizmo::IsUsing()) {
-		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-
-		// Descomponer la matriz resultante de ImGuizmo
-		ImGuizmo::DecomposeMatrixToComponents(mArr, matrixTranslation, matrixRotation, matrixScale);
-
-		// Reconstruir la matriz de DirectX
-		transform.get()->matrix = XMMatrixTransformation(
-			XMVectorSet(0, 0, 0, 1), // origen de escala
-			XMQuaternionIdentity(),   // rotación de escala
-			XMLoadFloat3((XMFLOAT3*)matrixScale),
-			XMVectorSet(0, 0, 0, 1), // centro de rotación
-			XMQuaternionRotationRollPitchYaw(XMConvertToRadians(matrixRotation[0]), 
-				XMConvertToRadians(matrixRotation[1]), XMConvertToRadians(matrixRotation[2])),
-			XMLoadFloat3((XMFLOAT3*)matrixTranslation)
-		);
-
-		// Actualizar los componentes de posición, rotación y escala global del objeto
 		float newPos[3], newRot[3], newSca[3];
+
+		// Sacamos los datos de la matriz de ImGuizmo
 		ImGuizmo::DecomposeMatrixToComponents(mArr, newPos, newRot, newSca);
-		transform->setPosition(EU::Vector3( newPos[0], newPos[1], newPos[2]));
+
+		// Aplicamos a los componentes del actor
+		transform->setPosition(EU::Vector3(newPos[0], newPos[1], newPos[2]));
 		transform->setRotation(EU::Vector3(newRot[0], newRot[1], newRot[2]));
 		transform->setScale(EU::Vector3(newSca[0], newSca[1], newSca[2]));
+
+		// Sincronizamos la matriz final de DirectX para el renderizado
+		// Nota: SR T (Scale * Rotation * Translation)
+		XMMATRIX matScale = XMMatrixScaling(newSca[0], newSca[1], newSca[2]);
+		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(newRot[0]),
+			XMConvertToRadians(newRot[1]),
+			XMConvertToRadians(newRot[2])
+		);
+		XMMATRIX matTrans = XMMatrixTranslation(newPos[0], newPos[1], newPos[2]);
+
+		// Esta es la matriz que usará tu Vertex Shader
+		transform->matrix = matScale * matRot * matTrans;
 	}
 }
 
