@@ -1,4 +1,5 @@
 #include "EngineUtilities\GUI\GUI.h"
+#include "Viewport.h"
 #include "Window.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -38,16 +39,16 @@ GUI::init(Window& window, Device& device, DeviceContext& deviceContext) {
 }
 
 void
-GUI::update(Window& window) {
+GUI::update(Viewport& viewport, Window& window) {
 	// Start the Dear ImGui frame
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
 	ImGuizmo::BeginFrame();
-	ImGuizmo::SetOrthographic(false);
 	ImGuiIO& io = ImGui::GetIO();
-	ImGuizmo::SetRect(0, 0, window.m_width, window.m_height);
+	ImGuizmo::SetOrthographic(false);
+	ImGuizmo::SetRect(0, 0, (float)window.m_width, (float)window.m_height);
 
 	// In Program always
 	ToolBar();
@@ -437,16 +438,14 @@ GUI::editTransform(const XMMATRIX& view, const XMMATRIX& projection, EU::TShared
 	// 3) PREPARAR MATRICES DE CÁMARA (Transponer para que ImGuizmo las entienda)
 	float vArr[16], pArr[16];
 	// Probar SIN transponer primero
-	XMStoreFloat4x4((XMFLOAT4X4*)vArr, view);
-	XMStoreFloat4x4((XMFLOAT4X4*)pArr, projection);
-
-	// 4) CONFIGURAR RECT (Asegúrate de que esto se llame)
-	ImGuiIO& io = ImGui::GetIO();
-	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	ToFloatArray(view, vArr);
+	ToFloatArray(projection, pArr);
 
 	// 5) DIBUJAR GIZMO
 	ImGuizmo::SetID(0);
 	ImGuizmo::SetGizmoSizeClipSpace(0.15f);
+	ImGuizmo::AllowAxisFlip(false);
+
 	// Define cuánto quieres que "salte" la rotación (ejemplo: 15 grados)
 	float snapValue = 25.0f;
 	if (mCurrentGizmoOperation == ImGuizmo::ROTATE) snapValue = 5.0f;
@@ -468,7 +467,6 @@ GUI::editTransform(const XMMATRIX& view, const XMMATRIX& projection, EU::TShared
 		useSnap ? snap : NULL // Aquí pasas el snap si se desea
 	);
 
-	// mCurrentGizmoOperation debe venir de tu Toolbar (TRANSLATE, ROTATE o SCALE)
 	ImGuizmo::Manipulate(vArr, pArr, mCurrentGizmoOperation, mCurrentGizmoMode, mArr);
 
 	// 6) SI SE ESTÁ USANDO, ACTUALIZAR ACTOR

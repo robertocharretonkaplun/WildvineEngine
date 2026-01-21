@@ -92,5 +92,7 @@ ComponentType {
   NONE = 0,     ///< Tipo de componente no especificado.
   TRANSFORM = 1,///< Componente de transformación.
   MESH = 2,     ///< Componente de malla.
-  MATERIAL = 3  ///< Componente de material.
+  MATERIAL = 3,  ///< Componente de material.
+	HIERARCHY = 4 ///< Componente de jerarquía.
 };
+
