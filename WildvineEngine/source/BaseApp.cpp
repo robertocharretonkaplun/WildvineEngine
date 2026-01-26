@@ -1,7 +1,7 @@
 #include "BaseApp.h"
 #include "ResourceManager.h"
 
-HRESULT 
+HRESULT
 BaseApp::awake() {
 	HRESULT hr = S_OK;
 
@@ -16,49 +16,49 @@ BaseApp::awake() {
 int
 BaseApp::run(HINSTANCE hInst, int nCmdShow) {
 	// 1) Initialize Window
-  if (FAILED(m_window.init(hInst, nCmdShow, WndProc))) {
+	if (FAILED(m_window.init(hInst, nCmdShow, WndProc))) {
 		ERROR("Main", "Run", "Failed to initialize window.");
-    return 0;
-  }
+		return 0;
+	}
 	// 2) Awake Application
 	if (FAILED(awake())) {
 		ERROR("Main", "Run", "Failed to awake application.");
 		return 0;
 	}
 	// 3) Initialize Device and Device Context
-	if (FAILED(init()))	{
+	if (FAILED(init())) {
 		ERROR("Main", "Run", "Failed to initialize device and device context.");
-    return 0;
+		return 0;
 	}
 	// 4) Initialize GUI
 	m_gui.init(m_window, m_device, m_deviceContext);
 
-  // Main message loop
-  MSG msg = {};
-  LARGE_INTEGER freq, prev;
-  QueryPerformanceFrequency(&freq);
-  QueryPerformanceCounter(&prev);
-  while (WM_QUIT != msg.message)
-  {
-    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-    {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
-    }
-    else
-    {
-      LARGE_INTEGER curr;
-      QueryPerformanceCounter(&curr);
-      float deltaTime = static_cast<float>(curr.QuadPart - prev.QuadPart) / freq.QuadPart;
-      prev = curr;
-      update(deltaTime);
-      render();
-    }
-  }
-  return (int)msg.wParam;
+	// Main message loop
+	MSG msg = {};
+	LARGE_INTEGER freq, prev;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&prev);
+	while (WM_QUIT != msg.message)
+	{
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			LARGE_INTEGER curr;
+			QueryPerformanceCounter(&curr);
+			float deltaTime = static_cast<float>(curr.QuadPart - prev.QuadPart) / freq.QuadPart;
+			prev = curr;
+			update(deltaTime);
+			render();
+		}
+	}
+	return (int)msg.wParam;
 }
 
-HRESULT 
+HRESULT
 BaseApp::init() {
 	HRESULT hr = S_OK;
 
@@ -115,7 +115,7 @@ BaseApp::init() {
 			("Failed to initialize Viewport. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
-	
+
 	// Load Resources -> Modelos, Texturas e Interfaz de usuario
 
 	// Set CyberGun Actor
@@ -143,18 +143,25 @@ BaseApp::init() {
 		m_actors.push_back(m_cyberGun);
 
 		m_cyberGun->getComponent<Transform>()->setTransform(EU::Vector3(2.0f, -4.90f, 11.60f),
-																												EU::Vector3(-0.60f, 3.0f, -0.20f),
-																												EU::Vector3(1.0f, 1.0f, 1.0f));
+			EU::Vector3(-0.60f, 3.0f, -0.20f),
+			EU::Vector3(1.0f, 1.0f, 1.0f));
 	}
 	else {
 		ERROR("Main", "InitDevice", "Failed to create cyber Gun Actor.");
 		return E_FAIL;
 	}
 
+	m_Character = EU::MakeShared<Actor>(m_device);
+	m_Character->setName("m_Character");
+	m_Character->getComponent<Transform>()->setTransform(EU::Vector3(2.0f, -4.90f, 11.60f),
+		EU::Vector3(-0.60f, 3.0f, -0.20f),
+		EU::Vector3(1.0f, 1.0f, 1.0f));
 	// Store the Actors in the Scene Graph
 	for (auto& actor : m_actors) {
-		m_sceneGraph.addEntity(actor);
+		m_sceneGraph.addEntity(actor.get());
 	}
+
+	m_sceneGraph.attach(m_Character.get(), m_sceneGraph.m_entities[0]); // Attach to root
 
 	// Define the input layout
 	std::vector<D3D11_INPUT_ELEMENT_DESC> Layout;
@@ -249,13 +256,15 @@ void BaseApp::update(float deltaTime)
 
 
 	// Update Actors
-	for (auto& actor : m_actors) {
-		actor->update(deltaTime, m_deviceContext);
-	}
-	m_gui.editTransform(m_View, m_Projection,	m_actors[m_gui.selectedActorIndex]);
+	m_sceneGraph.update(deltaTime, m_deviceContext);
+
+	//for (auto& actor : m_actors) {
+	//	actor->update(deltaTime, m_deviceContext);
+	//}
+	m_gui.editTransform(m_View, m_Projection, m_actors[m_gui.selectedActorIndex]);
 }
 
-void 
+void
 BaseApp::render() {
 	// Set Render Target View
 	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
@@ -273,11 +282,13 @@ BaseApp::render() {
 	// Asignar buffers constantes
 	m_cbNeverChanges.render(m_deviceContext, 0, 1);
 	m_cbChangeOnResize.render(m_deviceContext, 1, 1);
-	
+
 	// Render all actors
-	for (auto& actor : m_actors) {
-		actor->render(m_deviceContext);
-	}
+	m_sceneGraph.render(m_deviceContext);
+
+	//for (auto& actor : m_actors) {
+	//	actor->render(m_deviceContext);
+	//}
 
 	// Render UI
 	m_gui.render();
@@ -286,7 +297,7 @@ BaseApp::render() {
 	m_swapChain.present();
 }
 
-void 
+void
 BaseApp::destroy() {
 	if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
 
@@ -303,30 +314,30 @@ BaseApp::destroy() {
 	m_device.destroy();
 }
 
-LRESULT 
+LRESULT
 BaseApp::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam)) {
-    return true;
+		return true;
 	}
- 
+
 	switch (message)
-  {
-  case WM_CREATE:
-  {
-    CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
-    SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)pCreate->lpCreateParams);
-  }
-  return 0;
-  case WM_PAINT:
-  {
-    PAINTSTRUCT ps;
-    BeginPaint(hWnd, &ps);
-    EndPaint(hWnd, &ps);
-  }
-  return 0;
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    return 0;
-  }
-  return DefWindowProc(hWnd, message, wParam, lParam);
+	{
+	case WM_CREATE:
+	{
+		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)pCreate->lpCreateParams);
+	}
+	return 0;
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		BeginPaint(hWnd, &ps);
+		EndPaint(hWnd, &ps);
+	}
+	return 0;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+	return DefWindowProc(hWnd, message, wParam, lParam);
 }

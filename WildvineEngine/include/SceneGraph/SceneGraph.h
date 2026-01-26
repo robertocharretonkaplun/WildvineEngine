@@ -48,6 +48,6 @@ private:
 
 private:
 	//std::vector<EU::TSharedPointer<Entity>> m_entities;
+public:
 	std::vector<Entity*> m_entities;
-
 };

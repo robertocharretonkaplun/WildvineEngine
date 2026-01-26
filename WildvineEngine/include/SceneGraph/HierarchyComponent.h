@@ -32,11 +32,13 @@ public:
 		m_parent = parent; 
 	}
 
-	bool isRoot() const {
+	bool 
+	isRoot() const {
 		return m_parent == nullptr;
 	}
 	
-	bool hasChildren() const {
+	bool 
+	hasChildren() const {
 		return !m_children.empty();
 	}
 
