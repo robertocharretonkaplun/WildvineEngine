@@ -12,16 +12,25 @@ public:
 
 	void 
 	init();
-	
-	void 
-	addEntity(const EU::TSharedPointer<Entity>& e);  // registra en el grafo
 
 	void 
-	attach(const EU::TSharedPointer<Entity>& child, 
+	addEntity(Entity* e);  // registra en el grafo
+
+	//void 
+	//addEntity(const EU::TSharedPointer<Entity>& e);  // registra en el grafo
+
+	void
+	attach(Entity* child, Entity* parent);
+
+	//void 
+	//attach(const EU::TSharedPointer<Entity>& child, 
 				 const EU::TSharedPointer<Entity>& parent);
 	
-	void 
-	detach(const EU::TSharedPointer<Entity>& child);
+	//void 
+	//detach(const EU::TSharedPointer<Entity>& child);
+
+	void
+	detach(Entity* child);
 
 	void 
 	update(float deltaTime, DeviceContext& deviceContext);
@@ -29,6 +38,8 @@ public:
 	void 
 	render(DeviceContext& deviceContext);
 
+	void
+	destroy();
 private:
 	void 
 	updateWorldRecursive(const EU::TSharedPointer<Entity>& node,
@@ -37,6 +48,11 @@ private:
 	bool 
 	isRoot(const EU::TSharedPointer<Entity>& e) const;
 
+	bool
+	isRegistered(Entity* e) const;
+
 private:
-	std::vector<EU::TSharedPointer<Entity>> m_entities;
+	//std::vector<EU::TSharedPointer<Entity>> m_entities;
+	std::vector<Entity*> m_entities;
+
 };

@@ -458,14 +458,14 @@ GUI::editTransform(const XMMATRIX& view, const XMMATRIX& projection, EU::TShared
 	// Si mantienes presionada una tecla (ej. CTRL), aplicas el snap
 	bool useSnap = ImGui::GetIO().KeyCtrl;
 
-	ImGuizmo::Manipulate(
-		vArr, pArr,
-		mCurrentGizmoOperation,
-		mCurrentGizmoMode,
-		mArr,
-		NULL,
-		useSnap ? snap : NULL // Aquí pasas el snap si se desea
-	);
+	//ImGuizmo::Manipulate(
+	//	vArr, pArr,
+	//	mCurrentGizmoOperation,
+	//	mCurrentGizmoMode,
+	//	mArr,
+	//	NULL,
+	//	useSnap ? snap : NULL // Aquí pasas el snap si se desea
+	//);
 
 	ImGuizmo::Manipulate(vArr, pArr, mCurrentGizmoOperation, mCurrentGizmoMode, mArr);
 
