@@ -5,8 +5,8 @@
 class DeviceContext;
 class Entity;
 
-class HierarchyComponent : public Component
-{
+class 
+HierarchyComponent : public Component {
 public:
 	HierarchyComponent() : Component(ComponentType::HIERARCHY) {}
 	~HierarchyComponent() = default;
@@ -62,7 +62,7 @@ public:
 		);
 	}
 
-private:
+public:
 	Entity* m_parent = nullptr;
 	std::vector<Entity*> m_children;
 };

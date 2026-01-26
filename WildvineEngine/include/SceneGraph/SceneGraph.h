@@ -16,20 +16,16 @@ public:
 	void 
 	addEntity(Entity* e);  // registra en el grafo
 
-	//void 
-	//addEntity(const EU::TSharedPointer<Entity>& e);  // registra en el grafo
+	void 
+	removeEntity(Entity* e);
 
-	void
+	bool 
+	isAncestor(Entity* possibleAncestor, Entity* node) const;
+
+	bool
 	attach(Entity* child, Entity* parent);
 
-	//void 
-	//attach(const EU::TSharedPointer<Entity>& child, 
-				 const EU::TSharedPointer<Entity>& parent);
-	
-	//void 
-	//detach(const EU::TSharedPointer<Entity>& child);
-
-	void
+	bool
 	detach(Entity* child);
 
 	void 
@@ -42,11 +38,10 @@ public:
 	destroy();
 private:
 	void 
-	updateWorldRecursive(const EU::TSharedPointer<Entity>& node,
-		const XMMATRIX& parentWorld);
+	updateWorldRecursive(Entity* node, const XMMATRIX& parentWorld);
 
 	bool 
-	isRoot(const EU::TSharedPointer<Entity>& e) const;
+	isRoot(Entity* e) const;
 
 	bool
 	isRegistered(Entity* e) const;
