@@ -62,6 +62,7 @@ private:
 	Buffer															m_cbNeverChanges;
 	Buffer															m_cbChangeOnResize;
 	Texture 														m_cyberGunAlbedo;
+	Texture															m_skyboxTex;
 
 	XMMATRIX                            m_View;
 	XMMATRIX                            m_Projection;

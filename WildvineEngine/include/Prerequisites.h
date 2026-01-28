@@ -9,6 +9,7 @@
 #include <memory>
 #include <unordered_map>
 #include <type_traits>
+#include <array>
 
 // Librerias DirectX
 #include <d3d11.h>
