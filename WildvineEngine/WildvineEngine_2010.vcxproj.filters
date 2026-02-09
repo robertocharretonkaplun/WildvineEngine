@@ -131,6 +131,9 @@
     <ClCompile Include="source\SceneGraph\SceneGraph.cpp">
       <Filter>source\SceneGraph</Filter>
     </ClCompile>
+    <ClCompile Include="source\Camera.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="WildvineEngine.fx">
@@ -272,6 +275,9 @@
     </ClInclude>
     <ClInclude Include="include\SceneGraph\SceneGraph.h">
       <Filter>include\SceneGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineUtilities\Utilities\Camera.h">
+      <Filter>include\Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
