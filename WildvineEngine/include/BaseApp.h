@@ -66,8 +66,6 @@ private:
 	Texture															m_skyboxTex;
 
 	Camera															m_camera;
-	//XMMATRIX                            m_View;
-	//XMMATRIX                            m_Projection;
 
 	SceneGraph													m_sceneGraph;
 	std::vector<EU::TSharedPointer<Actor>> m_actors;
