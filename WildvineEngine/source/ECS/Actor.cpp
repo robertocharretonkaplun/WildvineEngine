@@ -92,7 +92,7 @@ Actor::render(DeviceContext& deviceContext) {
 	//
 	// 2) Estados de raster, blend y sampler para el modelo
 	//m_blendstate.render(deviceContext);
-	//m_rasterizer.render(deviceContext);
+	m_rasterizer.render(deviceContext);
 	m_sampler.render(deviceContext, 0, 1);
 
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

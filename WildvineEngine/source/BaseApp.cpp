@@ -217,6 +217,8 @@ BaseApp::init() {
 	cbNeverChanges.mView = XMMatrixTranspose(m_camera.getView());
 	cbChangesOnResize.mProjection = XMMatrixTranspose(m_camera.getProj());
 
+	// Initialize the Skybox
+	m_skybox.init(m_device, &m_deviceContext, m_skyboxTex);
 	return S_OK;
 }
 
@@ -302,6 +304,7 @@ BaseApp::render() {
 	m_cbChangeOnResize.render(m_deviceContext, 1, 1);
 
 	// Render all actors
+	m_skybox.render(m_deviceContext, m_camera);
 	m_sceneGraph.render(m_deviceContext);
 
 	// Render UI

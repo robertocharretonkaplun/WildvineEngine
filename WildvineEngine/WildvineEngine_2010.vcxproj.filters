@@ -137,9 +137,18 @@
     <ClCompile Include="source\Skybox.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\RasterizerState.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\DepthStencilState.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="WildvineEngine.fx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="bin\Skybox.hlsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
@@ -285,7 +294,11 @@
     <ClInclude Include="include\EngineUtilities\Utilities\Skybox.h">
       <Filter>include\Utilities</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="include\RasterizerState.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DepthStencilState.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
