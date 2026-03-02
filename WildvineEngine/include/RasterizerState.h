@@ -46,7 +46,11 @@ public:
   init(Device device);
   
   HRESULT 
-  init(Device device, unsigned int FillMode, unsigned int CullMode);
+  init(Device& device,
+       D3D11_FILL_MODE fill,
+       D3D11_CULL_MODE cull,
+       bool frontCCW,
+       bool depthClip);
 
   /**
    * @brief Actualiza parámetros internos del Rasterizer.

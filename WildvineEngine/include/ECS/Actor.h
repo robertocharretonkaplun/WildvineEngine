@@ -76,6 +76,9 @@ public:
   void 
   render(DeviceContext& deviceContext) override;
 
+  void 
+  renderForSkybox(DeviceContext& deviceContext);
+
   /**
    * @brief Libera todos los recursos asociados al actor.
    *
@@ -147,7 +150,7 @@ private:
   std::vector<Buffer> m_indexBuffers;    ///< Buffers de índices asociados a las mallas.
 
   //BlendState m_blendstate;               ///< Estado de blending usado por el actor.
-  RasterizerState m_rasterizer;               ///< Estado de rasterización usado por el actor.
+  //RasterizerState m_rasterizer;               ///< Estado de rasterización usado por el actor.
   SamplerState m_sampler;                ///< Estado de muestreo de texturas.
   CBChangesEveryFrame m_model;           ///< Constante de buffer para transformaciones por frame.
   Buffer m_modelBuffer;                  ///< Constant buffer que contiene @c m_model.

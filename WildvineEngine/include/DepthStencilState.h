@@ -44,7 +44,10 @@ public:
    * @sa render(), destroy()
    */
   HRESULT 
-  init(Device& device, bool enableDepth = true, bool enableStencil = false);
+  init(Device& device,
+    bool depthEnable,
+    D3D11_DEPTH_WRITE_MASK writeMask,
+    D3D11_COMPARISON_FUNC depthFunc);
 
   /**
    * @brief Actualiza parámetros internos si la implementación lo requiere.
