@@ -30,7 +30,6 @@ Buffer::init(Device& device, const MeshComponent& mesh, unsigned int bindFlag) {
 			m_stride = sizeof(SkyboxVertex);
 			desc.ByteWidth = m_stride * static_cast<unsigned int>(mesh.m_skyVertex.size());
 			data.pSysMem = mesh.m_skyVertex.data();
-
 		}
 		else {
 			m_stride = sizeof(SimpleVertex);
@@ -44,7 +43,6 @@ Buffer::init(Device& device, const MeshComponent& mesh, unsigned int bindFlag) {
 		desc.BindFlags = (D3D11_BIND_FLAG)bindFlag;
 		data.pSysMem = mesh.m_index.data();
 	}
-
 	return createBuffer(device, desc, &data);
 }
 

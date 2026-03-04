@@ -218,9 +218,10 @@ BaseApp::init() {
 	cbNeverChanges.mView = XMMatrixTranspose(m_camera.getView());
 	cbChangesOnResize.mProjection = XMMatrixTranspose(m_camera.getProj());
 
-	// Initialize the Skybox
+	// Initialize the Skybox pass -> Carga de textura + creación de buffers/ shaders específicos para el skybox
 	m_skybox.init(m_device, &m_deviceContext, m_skyboxTex);
 
+	// Initialize default states (Rasterizer, DepthStencil)
 	hr = m_defaultRasterizer.init(m_device, D3D11_FILL_SOLID, D3D11_CULL_BACK, false, true);
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
@@ -273,8 +274,8 @@ void BaseApp::update(float deltaTime)
 	m_gui.editTransform(m_camera.getView(), m_camera.getProj(), m_actors[m_gui.selectedActorIndex]);
 }
 
-void BaseApp::render()
-{
+void 
+BaseApp::render() {
 	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	m_renderTargetView.render(m_deviceContext, m_depthStencilView, 1, ClearColor);
 
@@ -284,7 +285,7 @@ void BaseApp::render()
 	// 1) SKYBOX PASS
 	m_skybox.render(m_deviceContext, m_camera);
 
-	// 2) RESTAURAR ESTADOS + PIPELINE DE ESCENA (esto te faltaba)
+	// 2) RESTAURAR ESTADOS + PIPELINE DE ESCENA
 	m_defaultRasterizer.render(m_deviceContext);
 	m_defaultDepthStencil.render(m_deviceContext, 0, false);
 
@@ -295,7 +296,7 @@ void BaseApp::render()
 
 	// Re-bindea shader/layout de escena
 	m_shaderProgram.render(m_deviceContext);
-	m_deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//m_deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// CBs para VS (view/proj)
 	m_cbNeverChanges.render(m_deviceContext, 0, 1);
@@ -304,7 +305,9 @@ void BaseApp::render()
 	// 3) SCENE PASS
 	m_sceneGraph.render(m_deviceContext);
 
+	// 4) GUI
 	m_gui.render();
+
 	m_swapChain.present();
 }
 
