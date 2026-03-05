@@ -53,8 +53,11 @@
 //--------------------------------------------------------------------------------------
 struct SimpleVertex
 {
-  XMFLOAT3 Pos;
-  XMFLOAT2 Tex;
+  EU::Vector3 Position;
+  EU::Vector3 Normal;
+  EU::Vector3 Tangent;
+  EU::Vector3 Bitangent;
+  EU::Vector2 TextureCoordinate;
 };
 
 struct 
@@ -76,6 +79,21 @@ struct CBSkybox
 struct CBChangeOnResize
 {
   XMMATRIX mProjection;
+};
+
+// Constant buffer used in the vertex and pixel shaders.  Align to
+// 16?bytes as required by Direct3D constant buffers.
+struct CBMain
+{
+  //XMFLOAT4X4 World;
+  XMFLOAT4X4 View;
+  XMFLOAT4X4 Projection;
+  EU::Vector3 CameraPos;
+  float pad0;
+  EU::Vector3 LightDir;
+  float pad1;
+  EU::Vector3 LightColor;
+  float pad2;
 };
 
 struct CBChangesEveryFrame

@@ -38,6 +38,9 @@ public:
 	 */
 	EU::Vector3 
 	getPosition() const { return m_position; }
+	
+	EU::Vector3 &
+	getPosition() { return m_position; }
 
 	/**
 	 * @brief Fuerza la cámara a mirar a un objetivo (LH).

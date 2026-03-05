@@ -67,7 +67,7 @@ Actor::Actor(Device& device) {
 	//m_LightPos = XMFLOAT4(2.0f, 4.0f, -2.0f, 1.0f);
 }
 
-void 
+void
 Actor::update(float deltaTime, DeviceContext& deviceContext) {
 	// Update all components
 	for (auto& component : m_components) {
@@ -83,7 +83,7 @@ Actor::update(float deltaTime, DeviceContext& deviceContext) {
 	m_modelBuffer.update(deviceContext, nullptr, 0, nullptr, &m_model, 0, 0);
 }
 
-void 
+void
 Actor::render(DeviceContext& deviceContext) {
 	m_sampler.render(deviceContext, 0, 1);
 
@@ -93,7 +93,7 @@ Actor::render(DeviceContext& deviceContext) {
 	{
 		m_vertexBuffers[i].render(deviceContext, 0, 1);
 		m_indexBuffers[i].render(deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
-		m_modelBuffer.render(deviceContext, 2, 1, true);
+		m_modelBuffer.render(deviceContext, 1, 1, true);
 
 		// Limpieza por mesh (evita herencias)
 		ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
@@ -101,14 +101,16 @@ Actor::render(DeviceContext& deviceContext) {
 
 		// Bind correcto por mesh
 		if (i < m_textures.size()) {
-			m_textures[i].render(deviceContext, 0, 1);   // albedo mesh i
+			for (int k = 0; k < m_textures.size(); k++) {
+				m_textures[k].render(deviceContext, k, 1);   // albedo mesh i
+			}
 		}
 		// else: se queda null
 		deviceContext.DrawIndexed(m_meshes[i].m_numIndex, 0, 0);
 	}
 }
 
-void 
+void
 Actor::renderForSkybox(DeviceContext& deviceContext) {
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	// Update buffer and render all components
@@ -141,7 +143,7 @@ Actor::destroy() {
 	m_sampler.destroy();
 }
 
-void 
+void
 Actor::setMesh(Device& device, std::vector<MeshComponent> meshes) {
 	m_meshes = meshes;
 	HRESULT hr;

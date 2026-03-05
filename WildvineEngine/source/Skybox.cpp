@@ -105,8 +105,17 @@ Skybox::init(Device& device, DeviceContext* deviceContext, Texture& cubemap) {
 	return S_OK;
 }
 
+void Skybox::update(DeviceContext& deviceContext, Camera& camera) {
+	// 2) View sin traslación + VP (SOLO una transpuesta al final)
+	XMMATRIX viewNoT = camera.GetViewNoTranslation();
+	XMMATRIX vp = viewNoT * camera.getProj();
+	CBSkybox cb{};
+	cb.mviewProj = XMMatrixTranspose(vp);
+	m_constantBuffer.update(deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
+}
+
 void
-Skybox::render(DeviceContext& deviceContext, Camera& camera) {
+Skybox::render(DeviceContext& deviceContext) {
 	// Guard: si no se inicializó bien, no intentes renderizar
 	if (!m_cubeModel || !m_skyboxTexture.m_textureFromImg) return;
 
@@ -114,12 +123,6 @@ Skybox::render(DeviceContext& deviceContext, Camera& camera) {
 	m_rasterizerState.render(deviceContext);
 	m_depthStencilState.render(deviceContext, 0, false);
 
-	// 2) View sin traslación + VP (SOLO una transpuesta al final)
-	XMMATRIX viewNoT = camera.GetViewNoTranslation();
-	XMMATRIX vp = viewNoT * camera.getProj();
-	CBSkybox cb{};
-	cb.mviewProj = XMMatrixTranspose(vp);
-	m_constantBuffer.update(deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
 	m_constantBuffer.render(deviceContext, 0, 1);
 
 	// 3) Shader + sampler (slot 10)

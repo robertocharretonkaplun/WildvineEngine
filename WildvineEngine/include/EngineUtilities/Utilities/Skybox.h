@@ -23,10 +23,10 @@ public:
 	init(Device& device, DeviceContext* deviceContext, Texture& cubemap);
 	
 	void 
-	update() {}
+	update(DeviceContext& deviceContext, Camera& camera);
 
 	void
-	render(DeviceContext& deviceContext, Camera& camera);
+	render(DeviceContext& deviceContext);
 
 	void
 	destroy() {}
