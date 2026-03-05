@@ -47,9 +47,12 @@ public:
 	void 
 	destroy();
 
+	void 
+	onResize(UINT newW, UINT newH);
 private:
 	static LRESULT CALLBACK 
 	WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
 
 private:
 	Window                              m_window;
@@ -64,7 +67,7 @@ private:
 	ShaderProgram												m_shaderProgram;
 	//Buffer															m_cbNeverChanges;
 	//Buffer															m_cbChangeOnResize;
-
+	bool m_d3dReady = false;
 	Buffer m_constantBuffer;
 	CBMain m_constantBufferStruct;
 

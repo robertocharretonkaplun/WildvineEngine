@@ -16,7 +16,7 @@ BaseApp::awake() {
 int
 BaseApp::run(HINSTANCE hInst, int nCmdShow) {
 	// 1) Initialize Window
-	if (FAILED(m_window.init(hInst, nCmdShow, WndProc))) {
+	if (FAILED(m_window.init(hInst, nCmdShow, WndProc,this))) {
 		ERROR("Main", "Run", "Failed to initialize window.");
 		return 0;
 	}
@@ -105,7 +105,7 @@ BaseApp::init() {
 			("Failed to initialize DepthStencilView. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
-
+	m_d3dReady = true;
 
 	// Crear el m_viewport
 	hr = m_viewport.init(m_window);
@@ -178,7 +178,7 @@ BaseApp::init() {
 		m_cyberGun->setName("CyberGun");
 		m_actors.push_back(m_cyberGun);
 
-		m_cyberGun->getComponent<Transform>()->setTransform(EU::Vector3(2.0f, -4.90f, 11.60f),
+		m_cyberGun->getComponent<Transform>()->setTransform(EU::Vector3(2.0f, -1.90f, 11.60f),
 			EU::Vector3(-0.60f, 3.0f, -0.20f),
 			EU::Vector3(1.0f, 1.0f, 1.0f));
 	}
@@ -285,7 +285,7 @@ void BaseApp::update(float deltaTime)
 	// Update Actors
 	m_sceneGraph.update(deltaTime, m_deviceContext);
 
-	m_gui.editTransform(m_camera.getView(), m_camera.getProj(), m_actors[m_gui.selectedActorIndex]);
+	m_gui.editTransform(m_camera, m_window, m_actors[m_gui.selectedActorIndex]);
 }
 
 void 
@@ -304,9 +304,9 @@ BaseApp::render() {
 	m_defaultDepthStencil.render(m_deviceContext, 0, false);
 
 	// limpia SRVs por seguridad
-	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-	m_deviceContext.m_deviceContext->PSSetShaderResources(10, 1, nullSRV);
-	m_deviceContext.m_deviceContext->PSSetShaderResources(0, 1, nullSRV);
+	//ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+	//m_deviceContext.m_deviceContext->PSSetShaderResources(10, 1, nullSRV);
+	//m_deviceContext.m_deviceContext->PSSetShaderResources(0, 1, nullSRV);
 
 	// Re-bindea shader/layout de escena
 	m_shaderProgram.render(m_deviceContext);
@@ -365,9 +365,75 @@ BaseApp::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 		EndPaint(hWnd, &ps);
 	}
 	return 0;
+	case WM_SIZE:
+	{
+		// Evita recrear cuando está minimizada
+		if (wParam == SIZE_MINIMIZED) return 0;
+
+		UINT newW = LOWORD(lParam);
+		UINT newH = HIWORD(lParam);
+		if (newW == 0 || newH == 0) return 0;
+
+		// Recupera tu instancia BaseApp (lo más común es guardarla en GWLP_USERDATA en WM_CREATE)
+		BaseApp* app = reinterpret_cast<BaseApp*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+		if (app) app->onResize(newW, newH);
+
+		return 0;
+	}
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+void BaseApp::onResize(UINT newW, UINT newH)
+{
+	// 1) Actualiza window size (tu init lo calcula con GetClientRect solo una vez) :contentReference[oaicite:6]{index=6}
+	if (!m_d3dReady) {
+		// Aun así puedes actualizar el tamaño lógico de la ventana
+		m_window.m_width = (int)newW;
+		m_window.m_height = (int)newH;
+		return;
+	}
+
+	if (!m_deviceContext.m_deviceContext || !m_swapChain.m_swapChain) return;
+	if (newW == 0 || newH == 0) return;
+
+	m_window.m_width = (int)newW;
+	m_window.m_height = (int)newH;
+	// 2) Desbindea targets actuales (clave antes de destruir)
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	m_deviceContext.m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
+
+	// 3) Libera recursos dependientes del tamaño (RTV/DSV/Depth/BackBuffer)
+	m_renderTargetView.destroy();
+	m_depthStencilView.destroy();
+	m_depthStencil.destroy();
+	m_backBuffer.destroy();
+
+	// 4) Resize swapchain
+	HRESULT hr = m_swapChain.resizeBuffers(newW, newH);
+	if (FAILED(hr)) return;
+
+	// 5) Re-obtén backbuffer
+	hr = m_swapChain.getBackBuffer(m_backBuffer);
+	if (FAILED(hr)) return;
+
+	// 6) Re-crea RTV
+	hr = m_renderTargetView.init(m_device, m_backBuffer, DXGI_FORMAT_R8G8B8A8_UNORM);
+	if (FAILED(hr)) return;
+
+	// 7) Re-crea Depth/DSV (tu init actual lo hace con m_window.m_width/m_height) :contentReference[oaicite:7]{index=7}
+	hr = m_depthStencil.init(m_device, newW, newH, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL, 4, 0);
+	if (FAILED(hr)) return;
+
+	hr = m_depthStencilView.init(m_device, m_depthStencil, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	if (FAILED(hr)) return;
+
+	// 8) Viewport
+	m_viewport.init(m_window);
+
+	// 9) Cámara (aspect ratio) (tu cámara lo calcula a partir de m_window) :contentReference[oaicite:8]{index=8}
+	m_camera.setLens(XM_PIDIV4, newW / (float)newH, 0.01f, 100.0f);
 }

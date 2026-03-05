@@ -93,6 +93,12 @@ public:
   void 
   present();
 
+  HRESULT 
+  resizeBuffers(UINT width, UINT height);
+  
+  HRESULT 
+  getBackBuffer(Texture& backBuffer);
+
 public:
   /**
    * @brief Objeto principal del Swap Chain en Direct3D 11.

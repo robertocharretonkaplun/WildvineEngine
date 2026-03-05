@@ -12,6 +12,7 @@ class Window;
 class Device;
 class DeviceContext;
 class Actor;
+class Camera;
 
 class 
 GUI {
@@ -63,7 +64,7 @@ public:
   outliner(const std::vector<EU::TSharedPointer<Actor>>& actors);
 
   void 
-  editTransform(const XMMATRIX& view, const XMMATRIX& projection, EU::TSharedPointer<Actor> actor);
+  editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> actor);
 
   void 
   drawGizmoToolbar();
@@ -74,6 +75,7 @@ public:
     XMStoreFloat4x4(&temp, mat);
     memcpy(dest, &temp, sizeof(float) * 16);
   }
+
 
 private:
   bool checkboxValue = true;
