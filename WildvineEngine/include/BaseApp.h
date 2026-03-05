@@ -18,6 +18,7 @@
 #include "SceneGraph\SceneGraph.h"
 #include "EngineUtilities\Utilities\Camera.h"
 #include "EngineUtilities\Utilities\Skybox.h"
+#include "EngineUtilities\Utilities\LayoutBuilder.h"
 
 extern IMGUI_IMPL_API
 LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
