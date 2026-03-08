@@ -239,11 +239,18 @@ BaseApp::init() {
 		return hr;
 	}
 
+	hr = m_editorViewportPass.init(m_device, 1280, 720);
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize EditorViewportPass. HRESULT: " + std::to_string(hr)).c_str());
+		return hr;
+	}
+
 	return S_OK;
 }
 
-void BaseApp::update(float deltaTime)
-{
+void 
+BaseApp::update(float deltaTime) {
 	// Update our time
 	static float t = 0.0f;
 	if (m_swapChain.m_driverType == D3D_DRIVER_TYPE_REFERENCE)
@@ -262,8 +269,45 @@ void BaseApp::update(float deltaTime)
 	m_gui.update(m_viewport, m_window);
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
+	m_gui.drawViewportPanel(m_editorViewportPass.getSRV());
 	m_gui.inspectorGeneral(m_actors[m_gui.selectedActorIndex]);
 	m_gui.outliner(m_actors);
+	m_gui.editTransform(m_camera, m_window, m_actors[m_gui.selectedActorIndex]);
+
+	unsigned int desiredW = static_cast<unsigned int>(m_gui.m_viewportSize.x);
+	unsigned int desiredH = static_cast<unsigned int>(m_gui.m_viewportSize.y);
+
+	const unsigned int kMinViewportSize = 64;
+
+	if (desiredW < kMinViewportSize) desiredW = kMinViewportSize;
+	if (desiredH < kMinViewportSize) desiredH = kMinViewportSize;
+
+	// Si cambió el tamaño solicitado, reinicia estabilidad
+	if (desiredW != m_lastRequestedViewportWidth || desiredH != m_lastRequestedViewportHeight)
+	{
+		m_lastRequestedViewportWidth = desiredW;
+		m_lastRequestedViewportHeight = desiredH;
+		m_viewportResizeStableFrames = 0;
+	}
+	else
+	{
+		// El tamaño ya no cambió este frame
+		m_viewportResizeStableFrames++;
+	}
+
+	// Solo marcar resize cuando el tamaño se haya mantenido estable
+	const int kStableFramesRequired = 2;
+
+	if (m_viewportResizeStableFrames >= kStableFramesRequired)
+	{
+		if (desiredW != m_editorViewportPass.getWidth() ||
+			desiredH != m_editorViewportPass.getHeight())
+		{
+			m_editorViewportResizePending = true;
+			m_pendingViewportWidth = desiredW;
+			m_pendingViewportHeight = desiredH;
+		}
+	}
 
 	// Actualizar la matriz de proyección y vista
 	m_camera.updateViewMatrix();
@@ -285,16 +329,17 @@ void BaseApp::update(float deltaTime)
 	// Update Actors
 	m_sceneGraph.update(deltaTime, m_deviceContext);
 
-	m_gui.editTransform(m_camera, m_window, m_actors[m_gui.selectedActorIndex]);
 }
 
 void 
 BaseApp::render() {
-	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	m_renderTargetView.render(m_deviceContext, m_depthStencilView, 1, ClearColor);
+	handleEditorViewportResize();
 
-	m_viewport.render(m_deviceContext);
-	m_depthStencilView.render(m_deviceContext);
+	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	const float viewportClear[4] = { 0.10f, 0.10f, 0.10f, 1.0f };
+	m_editorViewportPass.begin(m_deviceContext, viewportClear);
+	m_editorViewportPass.setViewport(m_deviceContext);
+	m_editorViewportPass.clearDepth(m_deviceContext);
 
 	// 1) SKYBOX PASS
 	m_skybox.render(m_deviceContext);
@@ -317,6 +362,11 @@ BaseApp::render() {
 	// 3) SCENE PASS
 	m_sceneGraph.render(m_deviceContext);
 
+	// 2) Volver al backbuffer principal
+	m_renderTargetView.render(m_deviceContext, m_depthStencilView, 1, ClearColor);
+	m_viewport.render(m_deviceContext);
+	m_depthStencilView.render(m_deviceContext);
+
 	// 4) GUI
 	m_gui.render();
 
@@ -327,6 +377,7 @@ void
 BaseApp::destroy() {
 	if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
 	m_sceneGraph.destroy();
+	m_editorViewportPass.destroy();
 	m_AlbedoSRV.destroy();
 	m_MetallicSRV.destroy();
 	m_NormalSRV.destroy();
@@ -436,4 +487,35 @@ void BaseApp::onResize(UINT newW, UINT newH)
 
 	// 9) Cámara (aspect ratio) (tu cámara lo calcula a partir de m_window) :contentReference[oaicite:8]{index=8}
 	m_camera.setLens(XM_PIDIV4, newW / (float)newH, 0.01f, 100.0f);
+}
+
+void BaseApp::handleEditorViewportResize()
+{
+	if (!m_editorViewportResizePending)
+		return;
+
+	// Desbindear antes de tocar recursos
+	m_deviceContext.m_deviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+
+	ID3D11ShaderResourceView* nullSRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+	m_deviceContext.m_deviceContext->PSSetShaderResources(
+		0,
+		D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
+		nullSRVs
+	);
+
+	// Crear pass temporal nuevo
+	EditorViewportPass newPass;
+	HRESULT hr = newPass.init(m_device, m_pendingViewportWidth, m_pendingViewportHeight);
+	if (FAILED(hr))
+	{
+		// Si falla, conserva el pass actual
+		m_editorViewportResizePending = false;
+		return;
+	}
+
+	// Intercambio seguro: el pass viejo queda en newPass y se destruye al salir
+	m_editorViewportPass.swap(newPass);
+
+	m_editorViewportResizePending = false;
 }
