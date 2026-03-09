@@ -53,6 +53,7 @@ GUI::update(Viewport& viewport, Window& window) {
 
 	// In Program always
 	drawStudioTopRibbon();
+	drawEditorDockspace();
 	closeApp();
 	drawGizmoToolbar();
 }
@@ -497,14 +498,14 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 	}
 }void GUI::drawGizmoToolbar()
 {
-	ImGui::SetNextWindowPos(ImVec2(10, 100), ImGuiCond_Always);
+	//ImGui::SetNextWindowPos(ImVec2(300, 150), ImGuiCond_Always);
 	ImGui::SetNextWindowBgAlpha(0.0f); // 0 = transparente total
 
 	ImGuiWindowFlags window_flags =
 		ImGuiWindowFlags_NoDecoration |
-		ImGuiWindowFlags_AlwaysAutoResize |
+		ImGuiWindowFlags_AlwaysAutoResize |/*
 		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoSavedSettings |*/
 		ImGuiWindowFlags_NoFocusOnAppearing |
 		ImGuiWindowFlags_NoNav;
 
@@ -808,7 +809,7 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 {
 	ImGuiWindowFlags flags =
 		ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoScrollWithMouse | 
 
 		ImGuiWindowFlags_NoCollapse;
 
@@ -852,4 +853,48 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 	ImGui::End();
 
 	ImGui::PopStyleVar();
+}
+
+void GUI::drawEditorDockspace()
+{
+	ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+
+	// Debe coincidir con la altura total que ocupa tu ribbon superior
+	const float topOffset = 96.0f; // 24 menu + 72 ribbon
+
+	ImVec2 dockPos = ImVec2(mainViewport->Pos.x, mainViewport->Pos.y + topOffset);
+	ImVec2 dockSize = ImVec2(mainViewport->Size.x, mainViewport->Size.y - topOffset);
+
+	ImGuiWindowFlags window_flags =
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus |
+		ImGuiWindowFlags_NoBackground |
+		ImGuiWindowFlags_NoDecoration |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_MenuBar;
+
+	ImGui::SetNextWindowPos(dockPos, ImGuiCond_Always);
+	ImGui::SetNextWindowSize(dockSize, ImGuiCond_Always);
+	ImGui::SetNextWindowViewport(mainViewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+	ImGui::Begin("##MainEditorDockspace", nullptr, window_flags);
+
+	ImGuiID dockspace_id = ImGui::GetID("##EditorDockspace");
+	ImGuiDockNodeFlags dockspace_flags =
+		ImGuiDockNodeFlags_None |
+		ImGuiDockNodeFlags_PassthruCentralNode;
+
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+	ImGui::End();
+
+	ImGui::PopStyleVar(3);
 }

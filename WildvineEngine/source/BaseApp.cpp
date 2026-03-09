@@ -16,7 +16,7 @@ BaseApp::awake() {
 int
 BaseApp::run(HINSTANCE hInst, int nCmdShow) {
 	// 1) Initialize Window
-	if (FAILED(m_window.init(hInst, nCmdShow, WndProc,this))) {
+	if (FAILED(m_window.init(hInst, nCmdShow, WndProc, this))) {
 		ERROR("Main", "Run", "Failed to initialize window.");
 		return 0;
 	}
@@ -105,7 +105,6 @@ BaseApp::init() {
 			("Failed to initialize DepthStencilView. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
-	m_d3dReady = true;
 
 	// Crear el m_viewport
 	hr = m_viewport.init(m_window);
@@ -115,6 +114,7 @@ BaseApp::init() {
 			("Failed to initialize Viewport. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
+	m_d3dReady = true;
 
 	// Load Resources -> Modelos, Texturas e Interfaz de usuario
 	std::array<std::string, 6> faces = {
@@ -428,7 +428,6 @@ BaseApp::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 		// Recupera tu instancia BaseApp (lo más común es guardarla en GWLP_USERDATA en WM_CREATE)
 		BaseApp* app = reinterpret_cast<BaseApp*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 		if (app) app->onResize(newW, newH);
-
 		return 0;
 	}
 	case WM_DESTROY:
@@ -475,7 +474,7 @@ void BaseApp::onResize(UINT newW, UINT newH)
 	hr = m_renderTargetView.init(m_device, m_backBuffer, DXGI_FORMAT_R8G8B8A8_UNORM);
 	if (FAILED(hr)) return;
 
-	// 7) Re-crea Depth/DSV (tu init actual lo hace con m_window.m_width/m_height) :contentReference[oaicite:7]{index=7}
+	// 7) Re-crea Depth/DSV (tu init actual lo hace con m_window.m_width/m_height)
 	hr = m_depthStencil.init(m_device, newW, newH, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL, 4, 0);
 	if (FAILED(hr)) return;
 
@@ -485,7 +484,7 @@ void BaseApp::onResize(UINT newW, UINT newH)
 	// 8) Viewport
 	m_viewport.init(m_window);
 
-	// 9) Cámara (aspect ratio) (tu cámara lo calcula a partir de m_window) :contentReference[oaicite:8]{index=8}
+	// 9) Cámara (aspect ratio) (tu cámara lo calcula a partir de m_window) 
 	m_camera.setLens(XM_PIDIV4, newW / (float)newH, 0.01f, 100.0f);
 }
 

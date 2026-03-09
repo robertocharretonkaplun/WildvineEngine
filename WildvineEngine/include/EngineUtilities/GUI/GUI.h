@@ -81,6 +81,8 @@ public:
 
   void drawViewportPanel(ID3D11ShaderResourceView* viewportSRV);
 
+  void drawEditorDockspace();
+
 private:
 
   bool checkboxValue = true;
