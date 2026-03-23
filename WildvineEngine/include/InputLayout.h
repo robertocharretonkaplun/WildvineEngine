@@ -15,6 +15,7 @@ class DeviceContext;
  */
 class 
 InputLayout {
+
 public:
   /**
    * @brief Constructor por defecto.
@@ -41,10 +42,10 @@ public:
    * @post Si retorna @c S_OK, @c m_inputLayout != nullptr.
    */
   HRESULT 
-  init(Device& device,
-       const D3D11_INPUT_ELEMENT_DESC* layoutDesc,
-       UINT layoutCount,
-       ID3DBlob* vertexShaderData);
+          init(Device& device,
+               const D3D11_INPUT_ELEMENT_DESC* layoutDesc,
+               UINT layoutCount,
+               ID3DBlob* vertexShaderData);
 
   /**
    * @brief Actualiza parámetros internos del Input Layout.
@@ -81,9 +82,9 @@ public:
   destroy();
 
 public:
-  /**
-   * @brief Recurso COM de Direct3D 11 que representa el Input Layout.
-   * @details Válido tras init(); @c nullptr después de destroy().
-   */
-  ID3D11InputLayout* m_inputLayout = nullptr;
+      /**
+       * @brief Recurso COM de Direct3D 11 que representa el Input Layout.
+       * @details Válido tras init(); @c nullptr después de destroy().
+       */
+      ID3D11InputLayout* m_inputLayout = nullptr;
 };

@@ -44,10 +44,10 @@ public:
    * @sa render(), destroy()
    */
   HRESULT 
-  init(Device& device,
-    bool depthEnable,
-    D3D11_DEPTH_WRITE_MASK writeMask,
-    D3D11_COMPARISON_FUNC depthFunc);
+         init(Device& device,
+              bool depthEnable,
+              D3D11_DEPTH_WRITE_MASK writeMask,
+              D3D11_COMPARISON_FUNC depthFunc);
 
   /**
    * @brief Actualiza parámetros internos si la implementación lo requiere.
@@ -75,7 +75,9 @@ public:
    * @sa init(), destroy()
    */
   void 
-  render(DeviceContext& deviceContext, unsigned int stencilRef = 0, bool reset = false);
+  render(DeviceContext& deviceContext, 
+         unsigned int stencilRef = 0, 
+         bool reset = false);
 
   /**
    * @brief Libera el recurso @c ID3D11DepthStencilState y deja la instancia en estado no inicializado.
@@ -88,9 +90,9 @@ public:
   destroy();
 
 private:
-  /**
-   * @brief Recurso COM de Direct3D 11 para el estado de profundidad/esténcil.
-   * @details Válido tras @c init(); @c nullptr después de @c destroy().
-   */
-  ID3D11DepthStencilState* m_depthStencilState = nullptr;
+        /**
+         * @brief Recurso COM de Direct3D 11 para el estado de profundidad/esténcil.
+         * @details Válido tras @c init(); @c nullptr después de @c destroy().
+         */
+         ID3D11DepthStencilState* m_depthStencilState = nullptr;
 };

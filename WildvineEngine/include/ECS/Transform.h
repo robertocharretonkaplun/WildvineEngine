@@ -3,94 +3,161 @@
 #include "EngineUtilities/Vectors/Vector3.h"
 #include "Component.h"
 
-class 
-Transform : public Component {
+/**
+ * @class   Transform
+ * @brief   Componente que define la posición, rotación y escala de una entidad.
+ *
+ * @details La clase @c Transform encapsula las propiedades espaciales de una
+ * entidad dentro del mundo 3D. Se encarga de calcular y mantener actualizada la
+ * matriz de transformación mundial componiendo su escala, rotación y traslación
+ * en cada ciclo del motor. Es un componente derivado de @c Component.
+ */
+class
+    Transform : public Component {
 public:
-  // Constructor que inicializa posición, rotación y escala por defecto
-  Transform() : position(), 
-                rotation(), 
-                scale(), 
-                matrix(), 
-                Component(ComponentType::TRANSFORM) {}
+    /**
+     * @brief Constructor por defecto.
+     *
+     * Inicializa la posición, rotación, escala y la matriz con sus constructores
+     * predeterminados y asigna el tipo de componente correspondiente.
+     */
+    Transform() : position(),
+                  rotation(),
+                  scale(),
+                  matrix(),
+                  Component(ComponentType::TRANSFORM) {
+    }
 
-  // Métodos para inicialización, actualización, renderizado y destrucción
-  // Inicializa el objeto Transform
-  void 
-  init() {
-    scale.one();
-    matrix = XMMatrixIdentity();
-  }
+    /**
+     * @brief Inicializa los valores base del componente Transform.
+     *
+     * Establece la escala inicial a la unidad (1, 1, 1) y define la matriz de
+     * transformación como la matriz identidad.
+     */
+    void
+        init() {
+            scale.one();
+            matrix = XMMatrixIdentity();
+    }
 
-  // Actualiza el estado del objeto Transform basado en el tiempo transcurrido
-  // @param deltaTime: Tiempo transcurrido desde la última actualización
-  void 
-  update(float deltaTime) override {
-    // Aplicar escala
-    XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
-    // Aplicar rotacion
-    XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
-    // Aplicar traslacion
-    XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
+    /**
+     * @brief Actualiza la matriz de transformación del componente.
+     *
+     * Calcula la matriz resultante componiendo las transformaciones individuales
+     * en el orden estándar para gráficos 3D: Escala -> Rotación -> Traslación.
+     *
+     * @param deltaTime Tiempo transcurrido en segundos desde la última actualización.
+     */
+    void
+        update(float deltaTime) override {
+        // Aplicar escala
+        XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
+        // Aplicar rotacion
+        XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
+        // Aplicar traslacion
+        XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
 
-    // Componer la matriz final en el orden: scale -> rotation -> translation
-    matrix = scaleMatrix * rotationMatrix * translationMatrix;
-  }
+        // Componer la matriz final en el orden: scale -> rotation -> translation
+        matrix = scaleMatrix * rotationMatrix * translationMatrix;
+    }
 
-  // Renderiza el objeto Transform
-  // @param deviceContext: Contexto del dispositivo de renderizado
-  void 
-  render(DeviceContext& deviceContext) override {}
+    /**
+     * @brief Renderiza el componente Transform.
+     *
+     * Este método carece de implementación activa ya que un Transform representa
+     * datos matemáticos y espaciales sin una representación visual directa propia.
+     *
+     * @param deviceContext Contexto del dispositivo utilizado para operaciones gráficas.
+     */
+    void
+        render(DeviceContext& deviceContext) override {}
 
-  // Destruye el objeto Transform y libera recursos
-  void 
-  destroy() {}
+    /**
+     * @brief Libera los recursos del componente Transform.
+     *
+     * Al no manejar punteros dinámicos crudos o recursos gráficos, la
+     * implementación está vacía.
+     */
+    void
+        destroy() {}
 
-  // Métodos de acceso a los datos de posición
-  // Retorna la posición actual
-  const EU::Vector3&
-  getPosition() const { return position; }
+    /**
+     * @brief Obtiene la posición espacial actual.
+     * @return Referencia constante al vector @c EU::Vector3 de posición.
+     */
+    const EU::Vector3&
+              getPosition() const { return position; }
 
-  // Establece una nueva posición
-  void 
-  setPosition(const EU::Vector3& newPos) { position = newPos; }
+    /**
+     * @brief Establece una nueva posición espacial.
+     * @param newPos Vector 3D con las nuevas coordenadas (x, y, z).
+     */
+    void
+        setPosition(const EU::Vector3& newPos) { position = newPos; }
 
-  // Métodos de acceso a los datos de rotación
-  // Retorna la rotación actual
-  const EU::Vector3&
-  getRotation() const { return rotation; }
+    /**
+     * @brief Obtiene la rotación actual de la entidad.
+     * @return Referencia constante al vector @c EU::Vector3 de rotación.
+     */
+    const EU::Vector3&
+              getRotation() const { return rotation; }
 
-  // Establece una nueva rotación
-  void 
-  setRotation(const EU::Vector3& newRot) { rotation = newRot; }
+    /**
+     * @brief Establece una nueva rotación espacial.
+     * @param newRot Vector 3D con los nuevos ángulos de rotación (Pitch, Yaw, Roll).
+     */
+    void
+        setRotation(const EU::Vector3& newRot) { rotation = newRot; }
 
-  // Métodos de acceso a los datos de escala
-  // Retorna la escala actual
-  const EU::Vector3&
-  getScale() const { return scale; }
+    /**
+     * @brief Obtiene la escala tridimensional actual.
+     * @return Referencia constante al vector @c EU::Vector3 de escala.
+     */
+    const EU::Vector3&
+              getScale() const { return scale; }
 
-  // Establece una nueva escala
-  void 
-  setScale(const EU::Vector3& newScale) { scale = newScale; }
+    /**
+     * @brief Establece una nueva escala tridimensional.
+     * @param newScale Vector 3D con los nuevos factores de multiplicación de tamaño.
+     */
+    void
+        setScale(const EU::Vector3& newScale) { scale = newScale; }
 
-  void
-  setTransform(const EU::Vector3& newPos, 
-               const EU::Vector3& newRot,
-               const EU::Vector3& newSca) {
-    position = newPos;
-    rotation = newRot;
-    scale = newSca;
-  }
+    /**
+     * @brief Define simultáneamente la posición, rotación y escala de la entidad.
+     *
+     * @param newPos Vector 3D con la nueva posición.
+     * @param newRot Vector 3D con la nueva rotación.
+     * @param newSca Vector 3D con la nueva escala.
+     */
+    void
+        setTransform(const EU::Vector3& newPos,
+                const EU::Vector3& newRot,
+                const EU::Vector3& newSca) {
+                position = newPos;
+                rotation = newRot;
+                scale = newSca;
+    }
 
-  // Método para trasladar la posición del objeto
-  // @param translation: Vector que representa la cantidad de traslado en cada eje
-  void 
-  translate(const EU::Vector3& translation);
+    /**
+     * @brief Desplaza la posición actual sumando un vector de traslación.
+     *
+     * @param translation Vector 3D que indica la dirección y magnitud del movimiento.
+     */
+    void
+        translate(const EU::Vector3& translation);
 
 private:
-  EU::Vector3 position;  // Posición del objeto
-  EU::Vector3 rotation;  // Rotación del objeto
-  EU::Vector3 scale;     // Escala del objeto
+    // ============================================================================
+    // Propiedades Espaciales
+    // ============================================================================
+    EU::Vector3 position;  ///< Coordenadas actuales en el espacio 3D.
+    EU::Vector3 rotation;  ///< Valores de rotación aplicados en los ejes correspondientes.
+    EU::Vector3 scale;     ///< Modificadores de tamaño a lo largo de los ejes X, Y y Z.
 
 public:
-  XMMATRIX matrix;    // Matriz de transformación
+    // ============================================================================
+    // Matrices de Cálculo
+    // ============================================================================
+    XMMATRIX matrix;    ///< Matriz de transformación mundial (World Matrix) precalculada.
 };
