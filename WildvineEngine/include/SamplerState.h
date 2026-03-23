@@ -17,6 +17,7 @@ class DeviceContext;
  */
 class 
 SamplerState {
+
 public:
   /**
    * @brief Constructor por defecto.
@@ -82,9 +83,9 @@ public:
   destroy();
 
 public:
-  /**
-   * @brief Recurso COM de Direct3D 11 para el Sampler State.
-   * @details Válido tras init(); @c nullptr después de destroy().
-   */
-  ID3D11SamplerState* m_sampler = nullptr;
+       /**
+       * @brief Recurso COM de Direct3D 11 para el Sampler State.
+       * @details Válido tras init(); @c nullptr después de destroy().
+       */
+       ID3D11SamplerState* m_sampler = nullptr;
 };
