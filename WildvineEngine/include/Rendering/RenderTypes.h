@@ -12,6 +12,14 @@ MaterialDomain {
 };
 
 enum class
+BlendMode {
+	Opaque = 0,
+	Alpha,
+	Additive,
+	PremultipliedAlpha
+};
+
+enum class
 RenderPassType {
 	Shadow = 0,
 	Opaque,

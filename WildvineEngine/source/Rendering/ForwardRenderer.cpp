@@ -35,7 +35,7 @@ ForwardRenderer::init(Device& device) {
 		return hr;
 	}
 
-	hr = createAlphaBlendState(device);
+	hr = createBlendStates(device);
 	if (FAILED(hr)) {
 		return hr;
 	}
@@ -93,6 +93,8 @@ ForwardRenderer::destroy() {
 	m_transparentQueue.clear();
 	SAFE_RELEASE(m_alphaBlendState);
 	SAFE_RELEASE(m_opaqueBlendState);
+	SAFE_RELEASE(m_additiveBlendState);
+	SAFE_RELEASE(m_premultipliedBlendState);
 	m_transparentDepthStencil.destroy();
 	m_perMaterialBuffer.destroy();
 	m_perObjectBuffer.destroy();
@@ -143,12 +145,13 @@ ForwardRenderer::renderOpaquePass(DeviceContext& deviceContext) {
 void
 ForwardRenderer::renderTransparentPass(DeviceContext& deviceContext) {
 	m_perFrameBuffer.render(deviceContext, 0, 1, true);
-	deviceContext.OMSetBlendState(m_alphaBlendState, m_blendFactor, 0xffffffff);
 
 	for (const RenderObject* object : m_transparentQueue) {
 		if (!object) {
 			continue;
 		}
+		Material* material = object->materialInstance ? object->materialInstance->getMaterial() : nullptr;
+		deviceContext.OMSetBlendState(resolveBlendState(material), m_blendFactor, 0xffffffff);
 		renderObject(deviceContext, *object, RenderPassType::Transparent);
 	}
 
@@ -225,7 +228,7 @@ ForwardRenderer::renderObject(DeviceContext& deviceContext,
 }
 
 HRESULT
-ForwardRenderer::createAlphaBlendState(Device& device) {
+ForwardRenderer::createBlendStates(Device& device) {
 	if (!device.m_device) {
 		return E_POINTER;
 	}
@@ -257,7 +260,55 @@ ForwardRenderer::createAlphaBlendState(Device& device) {
 	renderTarget.DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
 	renderTarget.BlendOpAlpha = D3D11_BLEND_OP_ADD;
 
-	return device.m_device->CreateBlendState(&blendDesc, &m_alphaBlendState);
+	hr = device.m_device->CreateBlendState(&blendDesc, &m_alphaBlendState);
+	if (FAILED(hr)) {
+		return hr;
+	}
+
+	renderTarget.BlendEnable = TRUE;
+	renderTarget.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	renderTarget.DestBlend = D3D11_BLEND_ONE;
+	renderTarget.BlendOp = D3D11_BLEND_OP_ADD;
+	renderTarget.SrcBlendAlpha = D3D11_BLEND_ONE;
+	renderTarget.DestBlendAlpha = D3D11_BLEND_ONE;
+	renderTarget.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+	hr = device.m_device->CreateBlendState(&blendDesc, &m_additiveBlendState);
+	if (FAILED(hr)) {
+		return hr;
+	}
+
+	renderTarget.BlendEnable = TRUE;
+	renderTarget.SrcBlend = D3D11_BLEND_ONE;
+	renderTarget.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	renderTarget.BlendOp = D3D11_BLEND_OP_ADD;
+	renderTarget.SrcBlendAlpha = D3D11_BLEND_ONE;
+	renderTarget.DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+	renderTarget.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+	return device.m_device->CreateBlendState(&blendDesc, &m_premultipliedBlendState);
+}
+
+ID3D11BlendState*
+ForwardRenderer::resolveBlendState(const Material* material) const {
+	if (!material) {
+		return m_opaqueBlendState;
+	}
+
+	if (material->getDomain() != MaterialDomain::Transparent) {
+		return m_opaqueBlendState;
+	}
+
+	switch (material->getBlendMode()) {
+	case BlendMode::Additive:
+		return m_additiveBlendState ? m_additiveBlendState : m_alphaBlendState;
+	case BlendMode::PremultipliedAlpha:
+		return m_premultipliedBlendState ? m_premultipliedBlendState : m_alphaBlendState;
+	case BlendMode::Alpha:
+	case BlendMode::Opaque:
+	default:
+		return m_alphaBlendState ? m_alphaBlendState : m_opaqueBlendState;
+	}
 }
 
 

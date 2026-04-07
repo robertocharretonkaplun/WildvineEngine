@@ -388,6 +388,13 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 				if (ImGui::Combo("Domain", &currentDomain, kMaterialDomains, IM_ARRAYSIZE(kMaterialDomains))) {
 					material->setDomain(static_cast<MaterialDomain>(currentDomain));
 				}
+				if (material->getDomain() == MaterialDomain::Transparent) {
+					static const char* kBlendModes[] = { "Opaque", "Alpha", "Additive", "Premultiplied" };
+					int currentBlendMode = static_cast<int>(material->getBlendMode());
+					if (ImGui::Combo("Blend Mode", &currentBlendMode, kBlendModes, IM_ARRAYSIZE(kBlendModes))) {
+						material->setBlendMode(static_cast<BlendMode>(currentBlendMode));
+					}
+				}
 			}
 			ImGui::ColorEdit4("Base Color", &params.baseColor.x);
 			ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);

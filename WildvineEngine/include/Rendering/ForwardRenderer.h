@@ -9,6 +9,7 @@ class Device;
 class DeviceContext;
 class Camera;
 class EditorViewportPass;
+class Material;
 
 class
 ForwardRenderer {
@@ -28,7 +29,8 @@ private:
 	void renderTransparentPass(DeviceContext& deviceContext);
 	void renderSkyboxPass(DeviceContext& deviceContext, RenderScene& scene);
 	void renderObject(DeviceContext& deviceContext, const RenderObject& object, RenderPassType passType);
-	HRESULT createAlphaBlendState(Device& device);
+	HRESULT createBlendStates(Device& device);
+	ID3D11BlendState* resolveBlendState(const Material* material) const;
 
 private:
 	Buffer m_perFrameBuffer;
@@ -37,6 +39,8 @@ private:
 	DepthStencilState m_transparentDepthStencil;
 	ID3D11BlendState* m_alphaBlendState = nullptr;
 	ID3D11BlendState* m_opaqueBlendState = nullptr;
+	ID3D11BlendState* m_additiveBlendState = nullptr;
+	ID3D11BlendState* m_premultipliedBlendState = nullptr;
 	float m_blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	CBPerFrame m_cbPerFrame{};

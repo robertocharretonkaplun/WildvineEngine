@@ -132,6 +132,10 @@ BaseApp::init() {
 
 	if (!m_cyberGun.isNull()) {
 		m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
+		if (!m_model || !m_model->load("CyberGun.fbx")) {
+			ERROR("Main", "InitDevice", "Failed to load CyberGun model.");
+			return E_FAIL;
+		}
 
 		hr = m_AlbedoSRV.init(m_device, "Textures/CyberGun/base.tga", PNG);
 		if (FAILED(hr)) {
