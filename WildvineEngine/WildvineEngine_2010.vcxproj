@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -445,6 +445,9 @@
     <ClCompile Include="source\ECS\Actor.cpp" />
     <ClCompile Include="source\EditorViewportPass.cpp" />
     <ClCompile Include="source\GUI\GUI.cpp" />
+    <ClCompile Include="source\Rendering\ForwardRenderer.cpp" />
+    <ClCompile Include="source\Rendering\MaterialInstance.cpp" />
+    <ClCompile Include="source\Rendering\RenderScene.cpp" />
     <ClCompile Include="source\InputLayout.cpp" />
     <ClCompile Include="source\Model3D.cpp" />
     <ClCompile Include="source\RasterizerState.cpp" />
@@ -480,6 +483,8 @@
     <ClInclude Include="include\DeviceContext.h" />
     <ClInclude Include="include\ECS\Actor.h" />
     <ClInclude Include="include\ECS\Component.h" />
+    <ClInclude Include="include\ECS\LightComponent.h" />
+    <ClInclude Include="include\ECS\MeshRendererComponent.h" />
     <ClInclude Include="include\ECS\Entity.h" />
     <ClInclude Include="include\ECS\Transform.h" />
     <ClInclude Include="include\EngineUtilities\GUI\GUI.h" />
@@ -489,6 +494,12 @@
     <ClInclude Include="include\EngineUtilities\Memory\TWeakPointer.h" />
     <ClInclude Include="include\EngineUtilities\Utilities\Camera.h" />
     <ClInclude Include="include\EngineUtilities\Utilities\EditorViewportPass.h" />
+    <ClInclude Include="include\Rendering\ForwardRenderer.h" />
+    <ClInclude Include="include\Rendering\Material.h" />
+    <ClInclude Include="include\Rendering\MaterialInstance.h" />
+    <ClInclude Include="include\Rendering\Mesh.h" />
+    <ClInclude Include="include\Rendering\RenderScene.h" />
+    <ClInclude Include="include\Rendering\RenderTypes.h" />
     <ClInclude Include="include\EngineUtilities\Utilities\EngineMath.h" />
     <ClInclude Include="include\EngineUtilities\Utilities\LayoutBuilder.h" />
     <ClInclude Include="include\EngineUtilities\Utilities\Skybox.h" />

@@ -1,10 +1,13 @@
-#include "EngineUtilities\GUI\GUI.h"
+Ôªø#include "EngineUtilities\GUI\GUI.h"
 #include "Viewport.h"
 #include "Window.h"
 #include "Device.h"
 #include "DeviceContext.h"
 #include "MeshComponent.h"
 #include "ECS\Actor.h"
+#include "ECS\MeshRendererComponent.h"
+#include "Rendering\Material.h"
+#include "Rendering\MaterialInstance.h"
 #include "EngineUtilities\Utilities\Camera.h"
 //#include "imgui_internal.h"
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
@@ -150,7 +153,7 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4* colors = style.Colors;
 
-	// GeometrÌa suave tipo macOS
+	// Geometr√≠a suave tipo macOS
 	style.WindowRounding = 14.0f;
 	style.ChildRounding = 14.0f;
 	style.PopupRounding = 14.0f;
@@ -169,13 +172,13 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	style.ItemSpacing = ImVec2(8, 8);
 	style.ItemInnerSpacing = ImVec2(8, 6);
 
-	const float o = opacity;                 // opacidad del ìcristalî
+	const float o = opacity;                 // opacidad del ‚Äúcristal‚Äù
 	const ImVec4 txt = ImVec4(1, 1, 1, 0.95f);     // texto claro
-	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ìvidriosoî oscuro
+	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ‚Äúvidrioso‚Äù oscuro
 	const ImVec4 paneHi = ImVec4(0.20f, 0.20f, 0.22f, o);
 	const ImVec4 paneLo = ImVec4(0.13f, 0.13f, 0.15f, o * 0.85f);
 
-	// Colores base ìglassî
+	// Colores base ‚Äúglass‚Äù
 	colors[ImGuiCol_Text] = txt;
 	colors[ImGuiCol_TextDisabled] = ImVec4(1, 1, 1, 0.45f);
 	colors[ImGuiCol_WindowBg] = pane;     // importante: con alpha
@@ -244,16 +247,16 @@ GUI::ToolBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("New")) {
-				// AcciÛn para "New"
+				// Acci√≥n para "New"
 			}
 			if (ImGui::MenuItem("Open")) {
-				// AcciÛn para "Open"
+				// Acci√≥n para "Open"
 			}
 			if (ImGui::MenuItem("Save")) {
-				// AcciÛn para "Save"
+				// Acci√≥n para "Save"
 			}
 			if (ImGui::MenuItem("Exit")) {
-				// AcciÛn para "Exit"
+				// Acci√≥n para "Exit"
 				show_exit_popup = true;
 				ImGui::OpenPopup("Exit?");
 				//closeApp();
@@ -262,28 +265,28 @@ GUI::ToolBar() {
 		}
 		if (ImGui::BeginMenu("Edit")) {
 			if (ImGui::MenuItem("Undo")) {
-				// AcciÛn para "Undo"
+				// Acci√≥n para "Undo"
 			}
 			if (ImGui::MenuItem("Redo")) {
-				// AcciÛn para "Redo"
+				// Acci√≥n para "Redo"
 			}
 			if (ImGui::MenuItem("Cut")) {
-				// AcciÛn para "Cut"
+				// Acci√≥n para "Cut"
 			}
 			if (ImGui::MenuItem("Copy")) {
-				// AcciÛn para "Copy"
+				// Acci√≥n para "Copy"
 			}
 			if (ImGui::MenuItem("Paste")) {
-				// AcciÛn para "Paste"
+				// Acci√≥n para "Paste"
 			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools")) {
 			if (ImGui::MenuItem("Options")) {
-				// AcciÛn para "Options"
+				// Acci√≥n para "Options"
 			}
 			if (ImGui::MenuItem("Settings")) {
-				// AcciÛn para "Settings"
+				// Acci√≥n para "Settings"
 			}
 			ImGui::EndMenu();
 		}
@@ -306,7 +309,7 @@ GUI::closeApp() {
 		ImGui::Separator();
 
 		if (ImGui::Button("OK", ImVec2(120, 0))) {
-			exit(0); // Salir de la aplicaciÛn
+			exit(0); // Salir de la aplicaci√≥n
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -321,20 +324,33 @@ GUI::closeApp() {
 void
 GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	ImGui::Begin("Inspector");
+	if (actor.isNull()) {
+		ImGui::TextUnformatted("No actor selected.");
+		ImGui::End();
+		return;
+	}
+
 	// Checkbox para Static
 	bool isStatic = false;
 	ImGui::Checkbox("##Static", &isStatic);
 	ImGui::SameLine();
 
 	// Input text para el nombre del objeto
-	char objectName[128] = "Cube";
+	static char objectName[128] = {};
+	static Actor* cachedActor = nullptr;
+	if (cachedActor != actor.get()) {
+		cachedActor = actor.get();
+		strncpy_s(objectName, actor->getName().c_str(), _TRUNCATE);
+	}
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.6f);
-	ImGui::InputText("##ObjectName", &actor->getName()[0], IM_ARRAYSIZE(objectName));
+	if (ImGui::InputText("##ObjectName", objectName, IM_ARRAYSIZE(objectName))) {
+		actor->setName(objectName);
+	}
 	ImGui::SameLine();
 
-	// Icono (este puede ser una imagen, aquÌ solo como ejemplo de botÛn)
+	// Icono (este puede ser una imagen, aqu√≠ solo como ejemplo de bot√≥n)
 	if (ImGui::Button("Icon")) {
-		// LÛgica del botÛn de icono aquÌ
+		// L√≥gica del bot√≥n de icono aqu√≠
 	}
 
 	// Separador horizontal
@@ -357,6 +373,32 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 		inspectorContainer(actor);
 	}
+
+	EU::TSharedPointer<MeshRendererComponent> meshRenderer = actor->getComponent<MeshRendererComponent>();
+	if (meshRenderer && meshRenderer->getMaterialInstance()) {
+		MaterialInstance* materialInstance = meshRenderer->getMaterialInstance();
+		MaterialParams& params = materialInstance->getParams();
+		Material* material = materialInstance->getMaterial();
+
+		ImGui::Separator();
+		if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (material) {
+				static const char* kMaterialDomains[] = { "Opaque", "Masked", "Transparent" };
+				int currentDomain = static_cast<int>(material->getDomain());
+				if (ImGui::Combo("Domain", &currentDomain, kMaterialDomains, IM_ARRAYSIZE(kMaterialDomains))) {
+					material->setDomain(static_cast<MaterialDomain>(currentDomain));
+				}
+			}
+			ImGui::ColorEdit4("Base Color", &params.baseColor.x);
+			ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);
+			ImGui::SliderFloat("Roughness", &params.roughness, 0.0f, 1.0f);
+			ImGui::SliderFloat("AO", &params.ao, 0.0f, 1.0f);
+			ImGui::SliderFloat("Normal Scale", &params.normalScale, 0.0f, 2.0f);
+			if (material && material->getDomain() == MaterialDomain::Masked) {
+				ImGui::SliderFloat("Alpha Cutoff", &params.alphaCutoff, 0.0f, 1.0f);
+			}
+		}
+	}
 	ImGui::End();
 }
 
@@ -375,20 +417,20 @@ void
 GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 	ImGui::Begin("Hierarchy");
 
-	// Barra de b˙squeda
+	// Barra de b√∫squeda
 	static ImGuiTextFilter filter;
-	filter.Draw("Search...", 180.0f); // Barra de b˙squeda con ancho ajustable
+	filter.Draw("Search...", 180.0f); // Barra de b√∫squeda con ancho ajustable
 
 	ImGui::Separator();
 
-	// Recorrer y mostrar cada actor que pase el filtro de b˙squeda
+	// Recorrer y mostrar cada actor que pase el filtro de b√∫squeda
 	for (int i = 0; i < actors.size(); ++i) {
 		const auto& actor = actors[i];
 
-		// Obtener el nombre del actor o asignar un nombre genÈrico
+		// Obtener el nombre del actor o asignar un nombre gen√©rico
 		std::string actorName = actor ? actor->getName() : "Actor";
 
-		// Verificar si el actor pasa el filtro de b˙squeda
+		// Verificar si el actor pasa el filtro de b√∫squeda
 		if (!filter.PassFilter(actorName.c_str())) {
 			continue; // Saltar actores que no coincidan con el filtro
 		}
@@ -398,16 +440,16 @@ GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 		if (selectedActorIndex == i)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
-		// Crear un nodo de ·rbol para cada actor
+		// Crear un nodo de √°rbol para cada actor
 		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "%s", actorName.c_str());
 
-		// SelecciÛn de actor
+		// Selecci√≥n de actor
 		if (ImGui::IsItemClicked()) {
 			selectedActorIndex = i;
-			// AquÌ puedes llamar a alguna funciÛn para mostrar los detalles del actor en otra ventana
+			// Aqu√≠ puedes llamar a alguna funci√≥n para mostrar los detalles del actor en otra ventana
 		}
 
-		// Mostrar nodos hijos si el nodo est· abierto
+		// Mostrar nodos hijos si el nodo est√° abierto
 		if (nodeOpen) {
 			ImGui::Text("Position: %.2f, %.2f, %.2f", 
 				actor->getComponent<Transform>().get()->getPosition().x, 
@@ -898,3 +940,5 @@ void GUI::drawEditorDockspace()
 
 	ImGui::PopStyleVar(3);
 }
+
+

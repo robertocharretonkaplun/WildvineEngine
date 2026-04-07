@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Prerequisites.h"
 #include "Window.h"
 #include "Device.h"
@@ -20,6 +20,13 @@
 #include "EngineUtilities\Utilities\Skybox.h"
 #include "EngineUtilities\Utilities\LayoutBuilder.h"
 #include "EngineUtilities/Utilities/EditorViewportPass.h"
+#include "ECS/LightComponent.h"
+#include "ECS/MeshRendererComponent.h"
+#include "Rendering/Material.h"
+#include "Rendering/MaterialInstance.h"
+#include "Rendering/Mesh.h"
+#include "Rendering/ForwardRenderer.h"
+#include "Rendering/RenderScene.h"
 extern IMGUI_IMPL_API
 LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -59,7 +66,7 @@ private:
 private:
 	Window                              m_window;
 	Device															m_device;
-	DeviceContext												m_deviceContext;
+	DeviceContext										m_deviceContext;
 	SwapChain                           m_swapChain;
 	Texture                             m_backBuffer;
 	RenderTargetView									  m_renderTargetView;
@@ -82,9 +89,10 @@ private:
 
 	Camera															m_camera;
 
-	SceneGraph													m_sceneGraph;
+	SceneGraph												m_sceneGraph;
 	std::vector<EU::TSharedPointer<Actor>> m_actors;
 	EU::TSharedPointer<Actor> m_cyberGun;
+	EU::TSharedPointer<Actor> m_directionalLightActor;
 
 	
 	Model3D*														m_model;
@@ -98,8 +106,14 @@ private:
 	Texture															m_skyboxTex;
 	RasterizerState m_defaultRasterizer;
 	DepthStencilState m_defaultDepthStencil;
+	SamplerState m_defaultSampler;
+	Mesh m_cyberGunRenderMesh;
+	Material m_pbrMaterial;
+	MaterialInstance m_cyberGunMaterial;
 
 	EditorViewportPass m_editorViewportPass;
+	ForwardRenderer m_forwardRenderer;
+	RenderScene m_renderScene;
 	bool m_editorViewportResizePending = false;
 	unsigned int m_pendingViewportWidth = 1;
 	unsigned int m_pendingViewportHeight = 1;
@@ -108,3 +122,4 @@ private:
 	unsigned int m_lastRequestedViewportHeight = 1;
 	int m_viewportResizeStableFrames = 0;
 };
+

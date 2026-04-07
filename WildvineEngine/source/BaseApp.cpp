@@ -131,12 +131,8 @@ BaseApp::init() {
 	m_cyberGun = EU::MakeShared<Actor>(m_device);
 
 	if (!m_cyberGun.isNull()) {
-		// Crear vertex buffer y index buffer para el pistol
-		std::vector<MeshComponent> cyberGunMeshes;
 		m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
-		cyberGunMeshes = m_model->GetMeshes();
 
-		std::vector<Texture> cyberGunTextures;
 		hr = m_AlbedoSRV.init(m_device, "Textures/CyberGun/base.tga", PNG);
 		if (FAILED(hr)) {
 			ERROR("Main", "InitDevice",
@@ -167,14 +163,6 @@ BaseApp::init() {
 				("Failed to initialize DrakePistol Texture. HRESULT: " + std::to_string(hr)).c_str());
 			return hr;
 		}
-		cyberGunTextures.push_back(m_AlbedoSRV);
-		cyberGunTextures.push_back(m_NormalSRV);
-		cyberGunTextures.push_back(m_MetallicSRV);
-		cyberGunTextures.push_back(m_RoughnessSRV);
-		cyberGunTextures.push_back(m_AOSRV);
-
-		m_cyberGun->setMesh(m_device, cyberGunMeshes);
-		m_cyberGun->setTextures(cyberGunTextures);
 		m_cyberGun->setName("CyberGun");
 		m_actors.push_back(m_cyberGun);
 
@@ -222,7 +210,7 @@ BaseApp::init() {
 	m_constantBufferStruct.LightColor = EU::Vector3(1.0f, 1.0f, 1.0f);
 	m_constantBufferStruct.LightDir = EU::Vector3(-0.20f, -1.0f, 1.0f);
 
-	// Initialize the Skybox pass -> Carga de textura + creaciÛn de buffers/ shaders especÌficos para el skybox
+	// Initialize the Skybox pass -> Carga de textura + creaci√≥n de buffers/ shaders espec√≠ficos para el skybox
 	m_skybox.init(m_device, &m_deviceContext, m_skyboxTex);
 
 	// Initialize default states (Rasterizer, DepthStencil)
@@ -238,11 +226,92 @@ BaseApp::init() {
 			("Failed to initialize default DepthStencilState. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
+	hr = m_defaultSampler.init(m_device);
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize default SamplerState. HRESULT: " + std::to_string(hr)).c_str());
+		return hr;
+	}
+
+	m_pbrMaterial.setShader(&m_shaderProgram);
+	m_pbrMaterial.setRasterizerState(&m_defaultRasterizer);
+	m_pbrMaterial.setDepthStencilState(&m_defaultDepthStencil);
+	m_pbrMaterial.setSamplerState(&m_defaultSampler);
+	m_pbrMaterial.setDomain(MaterialDomain::Opaque);
+
+	m_cyberGunMaterial.setMaterial(&m_pbrMaterial);
+	m_cyberGunMaterial.setAlbedo(&m_AlbedoSRV);
+	m_cyberGunMaterial.setNormal(&m_NormalSRV);
+	m_cyberGunMaterial.setMetallic(&m_MetallicSRV);
+	m_cyberGunMaterial.setRoughness(&m_RoughnessSRV);
+	m_cyberGunMaterial.setAO(&m_AOSRV);
+	m_cyberGunMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_cyberGunMaterial.getParams().metallic = 1.0f;
+	m_cyberGunMaterial.getParams().roughness = 1.0f;
+	m_cyberGunMaterial.getParams().ao = 1.0f;
+	m_cyberGunMaterial.getParams().normalScale = 1.0f;
+	m_cyberGunMaterial.getParams().alphaCutoff = 0.5f;
+
+	m_cyberGunRenderMesh.destroy();
+	for (const MeshComponent& meshComponent : m_model->GetMeshes()) {
+		Submesh submesh{};
+		hr = submesh.vertexBuffer.init(m_device, meshComponent, D3D11_BIND_VERTEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize CyberGun vertex buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		hr = submesh.indexBuffer.init(m_device, meshComponent, D3D11_BIND_INDEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize CyberGun index buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		submesh.indexCount = meshComponent.m_numIndex;
+		m_cyberGunRenderMesh.getSubmeshes().push_back(std::move(submesh));
+	}
+
+	EU::TSharedPointer<MeshRendererComponent> meshRenderer = m_cyberGun->getComponent<MeshRendererComponent>();
+	if (!meshRenderer) {
+		meshRenderer = EU::MakeShared<MeshRendererComponent>();
+		m_cyberGun->addComponent(meshRenderer);
+	}
+	meshRenderer->setMesh(&m_cyberGunRenderMesh);
+	meshRenderer->setMaterialInstance(&m_cyberGunMaterial);
+	meshRenderer->setVisible(true);
+	meshRenderer->setCastShadow(true);
+
+	m_directionalLightActor = EU::MakeShared<Actor>(m_device);
+	if (!m_directionalLightActor.isNull()) {
+		m_directionalLightActor->setName("DirectionalLight");
+		EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
+		if (!lightComponent) {
+			lightComponent = EU::MakeShared<LightComponent>();
+			m_directionalLightActor->addComponent(lightComponent);
+		}
+
+		lightComponent->getLightData().type = LightType::Directional;
+		lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
+		lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
+		lightComponent->getLightData().intensity = 1.0f;
+		lightComponent->setCastShadow(false);
+
+		m_sceneGraph.addEntity(m_directionalLightActor.get());
+	}
 
 	hr = m_editorViewportPass.init(m_device, 1280, 720);
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
 			("Failed to initialize EditorViewportPass. HRESULT: " + std::to_string(hr)).c_str());
+		return hr;
+	}
+
+	hr = m_forwardRenderer.init(m_device);
+	if (FAILED(hr)) {
+		ERROR("Main", "InitDevice",
+			("Failed to initialize ForwardRenderer. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
 
@@ -282,7 +351,7 @@ BaseApp::update(float deltaTime) {
 	if (desiredW < kMinViewportSize) desiredW = kMinViewportSize;
 	if (desiredH < kMinViewportSize) desiredH = kMinViewportSize;
 
-	// Si cambiÛ el tamaÒo solicitado, reinicia estabilidad
+	// Si cambi√≥ el tama√±o solicitado, reinicia estabilidad
 	if (desiredW != m_lastRequestedViewportWidth || desiredH != m_lastRequestedViewportHeight)
 	{
 		m_lastRequestedViewportWidth = desiredW;
@@ -291,11 +360,11 @@ BaseApp::update(float deltaTime) {
 	}
 	else
 	{
-		// El tamaÒo ya no cambiÛ este frame
+		// El tama√±o ya no cambi√≥ este frame
 		m_viewportResizeStableFrames++;
 	}
 
-	// Solo marcar resize cuando el tamaÒo se haya mantenido estable
+	// Solo marcar resize cuando el tama√±o se haya mantenido estable
 	const int kStableFramesRequired = 2;
 
 	if (m_viewportResizeStableFrames >= kStableFramesRequired)
@@ -309,7 +378,7 @@ BaseApp::update(float deltaTime) {
 		}
 	}
 
-	// Actualizar la matriz de proyecciÛn y vista
+	// Actualizar la matriz de proyecci√≥n y vista
 	m_camera.updateViewMatrix();
 
 	XMStoreFloat4x4(&m_constantBufferStruct.View, XMMatrixTranspose(m_camera.getView()));
@@ -319,12 +388,16 @@ BaseApp::update(float deltaTime) {
 	// Luz blanca fuerte
 	m_gui.vec3Control("Light Direction", &m_constantBufferStruct.LightDir.x, 0.1f);
 	m_gui.vec3Control("Light Color", &m_constantBufferStruct.LightColor.x, 0.1f);
+	if (!m_directionalLightActor.isNull()) {
+		EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
+		if (lightComponent) {
+			lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
+			lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
+		}
+	}
 
-	// Update Skybox Pass -> Solo necesita la vista sin traslaciÛn + proyecciÛn para funcionar correctamente (ver mÈtodo update de Skybox)
+	// Update Skybox Pass -> Solo necesita la vista sin traslaci√≥n + proyecci√≥n para funcionar correctamente (ver m√©todo update de Skybox)
 	m_skybox.update(m_deviceContext, m_camera);
-
-	// Update constant buffer for Scene Pass
-	m_constantBuffer.update(m_deviceContext, nullptr, 0, nullptr, &m_constantBufferStruct, 0, 0);
 
 	// Update Actors
 	m_sceneGraph.update(deltaTime, m_deviceContext);
@@ -336,31 +409,16 @@ BaseApp::render() {
 	handleEditorViewportResize();
 
 	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	const float viewportClear[4] = { 0.10f, 0.10f, 0.10f, 1.0f };
-	m_editorViewportPass.begin(m_deviceContext, viewportClear);
-	m_editorViewportPass.setViewport(m_deviceContext);
-	m_editorViewportPass.clearDepth(m_deviceContext);
 
-	// 1) SKYBOX PASS
-	m_skybox.render(m_deviceContext);
-
-	// 2) RESTAURAR ESTADOS + PIPELINE DE ESCENA
-	m_defaultRasterizer.render(m_deviceContext);
-	m_defaultDepthStencil.render(m_deviceContext, 0, false);
-
-	// limpia SRVs por seguridad
-	//ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-	//m_deviceContext.m_deviceContext->PSSetShaderResources(10, 1, nullSRV);
-	//m_deviceContext.m_deviceContext->PSSetShaderResources(0, 1, nullSRV);
-
-	// Re-bindea shader/layout de escena
-	m_shaderProgram.render(m_deviceContext);
-
-	// CBs para VS (view/proj)
-	m_constantBuffer.render(m_deviceContext, 0, 1, true);
-
-	// 3) SCENE PASS
-	m_sceneGraph.render(m_deviceContext);
+	m_renderScene.clear();
+	m_sceneGraph.gatherRenderScene(m_renderScene, m_camera);
+	m_renderScene.skybox = &m_skybox;
+	m_forwardRenderer.render(
+		m_deviceContext,
+		m_camera,
+		m_renderScene,
+		m_editorViewportPass
+	);
 
 	// 2) Volver al backbuffer principal
 	m_renderTargetView.render(m_deviceContext, m_depthStencilView, 1, ClearColor);
@@ -378,6 +436,8 @@ BaseApp::destroy() {
 	if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
 	m_sceneGraph.destroy();
 	m_editorViewportPass.destroy();
+	m_forwardRenderer.destroy();
+	m_cyberGunRenderMesh.destroy();
 	m_AlbedoSRV.destroy();
 	m_MetallicSRV.destroy();
 	m_NormalSRV.destroy();
@@ -385,6 +445,7 @@ BaseApp::destroy() {
 	m_AOSRV.destroy();
 	m_defaultRasterizer.destroy();
 	m_defaultDepthStencil.destroy();
+	m_defaultSampler.destroy();
 	//m_cbNeverChanges.destroy();
 	//m_cbChangeOnResize.destroy();
 	m_shaderProgram.destroy();
@@ -418,14 +479,14 @@ BaseApp::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	return 0;
 	case WM_SIZE:
 	{
-		// Evita recrear cuando est· minimizada
+		// Evita recrear cuando est√° minimizada
 		if (wParam == SIZE_MINIMIZED) return 0;
 
 		unsigned int newW = LOWORD(lParam);
 		unsigned int newH = HIWORD(lParam);
 		if (newW == 0 || newH == 0) return 0;
 
-		// Recupera tu instancia BaseApp (lo m·s com˙n es guardarla en GWLP_USERDATA en WM_CREATE)
+		// Recupera tu instancia BaseApp (lo m√°s com√∫n es guardarla en GWLP_USERDATA en WM_CREATE)
 		BaseApp* app = reinterpret_cast<BaseApp*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 		if (app) app->onResize(newW, newH);
 		return 0;
@@ -441,7 +502,7 @@ void BaseApp::onResize(unsigned int newW, unsigned int newH)
 {
 	// 1) Actualiza window size (tu init lo calcula con GetClientRect solo una vez) :contentReference[oaicite:6]{index=6}
 	if (!m_d3dReady) {
-		// Aun asÌ puedes actualizar el tamaÒo lÛgico de la ventana
+		// Aun as√≠ puedes actualizar el tama√±o l√≥gico de la ventana
 		m_window.m_width = (int)newW;
 		m_window.m_height = (int)newH;
 		return;
@@ -456,7 +517,7 @@ void BaseApp::onResize(unsigned int newW, unsigned int newH)
 	ID3D11RenderTargetView* nullRTV = nullptr;
 	m_deviceContext.m_deviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
 
-	// 3) Libera recursos dependientes del tamaÒo (RTV/DSV/Depth/BackBuffer)
+	// 3) Libera recursos dependientes del tama√±o (RTV/DSV/Depth/BackBuffer)
 	m_renderTargetView.destroy();
 	m_depthStencilView.destroy();
 	m_depthStencil.destroy();
@@ -466,7 +527,7 @@ void BaseApp::onResize(unsigned int newW, unsigned int newH)
 	HRESULT hr = m_swapChain.resizeBuffers(newW, newH);
 	if (FAILED(hr)) return;
 
-	// 5) Re-obtÈn backbuffer
+	// 5) Re-obt√©n backbuffer
 	hr = m_swapChain.getBackBuffer(m_backBuffer);
 	if (FAILED(hr)) return;
 
@@ -484,7 +545,7 @@ void BaseApp::onResize(unsigned int newW, unsigned int newH)
 	// 8) Viewport
 	m_viewport.init(m_window);
 
-	// 9) C·mara (aspect ratio) (tu c·mara lo calcula a partir de m_window) 
+	// 9) C√°mara (aspect ratio) (tu c√°mara lo calcula a partir de m_window) 
 	m_camera.setLens(XM_PIDIV4, newW / (float)newH, 0.01f, 100.0f);
 }
 
@@ -518,3 +579,4 @@ void BaseApp::handleEditorViewportResize()
 
 	m_editorViewportResizePending = false;
 }
+
