@@ -5,12 +5,44 @@
 #include "DeviceContext.h"
 #include "MeshComponent.h"
 #include "ECS\Actor.h"
+#include "ECS\LightComponent.h"
 #include "ECS\MeshRendererComponent.h"
+#include "Rendering\Mesh.h"
 #include "Rendering\Material.h"
 #include "Rendering\MaterialInstance.h"
 #include "EngineUtilities\Utilities\Camera.h"
 //#include "imgui_internal.h"
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
+
+namespace {
+const char* GetLightTypeLabel(LightType type) {
+	switch (type) {
+	case LightType::Directional: return "Directional";
+	case LightType::Point: return "Point";
+	case LightType::Spot: return "Spot";
+	default: return "Unknown";
+	}
+}
+
+const char* GetMaterialDomainLabel(MaterialDomain domain) {
+	switch (domain) {
+	case MaterialDomain::Opaque: return "Opaque";
+	case MaterialDomain::Masked: return "Masked";
+	case MaterialDomain::Transparent: return "Transparent";
+	default: return "Unknown";
+	}
+}
+
+const char* GetBlendModeLabel(BlendMode blendMode) {
+	switch (blendMode) {
+	case BlendMode::Opaque: return "Opaque";
+	case BlendMode::Alpha: return "Alpha";
+	case BlendMode::Additive: return "Additive";
+	case BlendMode::PremultipliedAlpha: return "Premultiplied";
+	default: return "Unknown";
+	}
+}
+}
 void 
 GUI::init(Window& window, Device& device, DeviceContext& deviceContext) {
 	// Setup Dear ImGui context
@@ -51,6 +83,9 @@ GUI::update(Viewport& viewport, Window& window) {
 
 	ImGuizmo::BeginFrame();
 	ImGuiIO& io = ImGui::GetIO();
+	if (io.KeyCtrl && ImGui::IsKeyPressed('S', false)) {
+		m_requestSaveScene = true;
+	}
 	ImGuizmo::SetOrthographic(false);
 	//ImGuizmo::SetRect(0, 0, (float)window.m_width, (float)window.m_height);
 
@@ -325,85 +360,128 @@ void
 GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	ImGui::Begin("Inspector");
 	if (actor.isNull()) {
-		ImGui::TextUnformatted("No actor selected.");
+		ImGui::Dummy(ImVec2(0.0f, 12.0f));
+		ImGui::TextDisabled("No actor selected");
+		ImGui::TextWrapped("Select an actor in the Hierarchy to inspect transforms, materials, lights and renderer data.");
 		ImGui::End();
 		return;
 	}
 
-	// Checkbox para Static
-	bool isStatic = false;
-	ImGui::Checkbox("##Static", &isStatic);
-	ImGui::SameLine();
-
-	// Input text para el nombre del objeto
 	static char objectName[128] = {};
 	static Actor* cachedActor = nullptr;
 	if (cachedActor != actor.get()) {
 		cachedActor = actor.get();
 		strncpy_s(objectName, actor->getName().c_str(), _TRUNCATE);
 	}
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.6f);
+
+	auto meshRenderer = actor->getComponent<MeshRendererComponent>();
+	auto lightComponent = actor->getComponent<LightComponent>();
+	auto transform = actor->getComponent<Transform>();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 8.0f));
+	ImGui::BeginChild("##InspectorHeader", ImVec2(0.0f, 88.0f), true);
+	ImGui::TextDisabled("Selection");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 110.0f);
 	if (ImGui::InputText("##ObjectName", objectName, IM_ARRAYSIZE(objectName))) {
 		actor->setName(objectName);
 	}
-	ImGui::SameLine();
-
-	// Icono (este puede ser una imagen, aquí solo como ejemplo de botón)
-	if (ImGui::Button("Icon")) {
-		// Lógica del botón de icono aquí
+	ImGui::Spacing();
+	if (meshRenderer) {
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.45f, 0.75f, 1.0f, 1.0f), "Mesh");
 	}
+	if (lightComponent) {
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.38f, 1.0f), "Light");
+	}
+	if (transform) {
+		ImGui::TextDisabled("Transform, renderer and component data");
+	}
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
 
-	// Separador horizontal
-	ImGui::Separator();
-
-	// Dropdown para Tag
-	const char* tags[] = { "Untagged", "Player", "Enemy", "Environment" };
-	static int currentTag = 0;
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
-	ImGui::Combo("Tag", &currentTag, tags, IM_ARRAYSIZE(tags));
-	ImGui::SameLine();
-
-	// Dropdown para Layer
-	const char* layers[] = { "Default", "TransparentFX", "Ignore Raycast", "Water", "UI" };
-	static int currentLayer = 0;
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
-	ImGui::Combo("Layer", &currentLayer, layers, IM_ARRAYSIZE(layers));
-
-	ImGui::Separator();
-	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+	ImGui::Spacing();
+	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen) && transform) {
 		inspectorContainer(actor);
 	}
 
-	EU::TSharedPointer<MeshRendererComponent> meshRenderer = actor->getComponent<MeshRendererComponent>();
-	if (meshRenderer && meshRenderer->getMaterialInstance()) {
-		MaterialInstance* materialInstance = meshRenderer->getMaterialInstance();
-		MaterialParams& params = materialInstance->getParams();
-		Material* material = materialInstance->getMaterial();
+	if (meshRenderer) {
+		const std::vector<MaterialInstance*>& materialInstances = meshRenderer->getMaterialInstances();
+		Mesh* mesh = meshRenderer->getMesh();
 
-		ImGui::Separator();
-		if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-			if (material) {
-				static const char* kMaterialDomains[] = { "Opaque", "Masked", "Transparent" };
-				int currentDomain = static_cast<int>(material->getDomain());
-				if (ImGui::Combo("Domain", &currentDomain, kMaterialDomains, IM_ARRAYSIZE(kMaterialDomains))) {
-					material->setDomain(static_cast<MaterialDomain>(currentDomain));
+		if (ImGui::CollapsingHeader("Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
+			const int submeshCount = mesh ? static_cast<int>(mesh->getSubmeshes().size()) : 0;
+			const int materialCount = static_cast<int>(materialInstances.size());
+			ImGui::Text("Visible");
+			ImGui::SameLine();
+			ImGui::TextDisabled(meshRenderer->isVisible() ? "Yes" : "No");
+			ImGui::Text("Cast Shadow");
+			ImGui::SameLine();
+			ImGui::TextDisabled(meshRenderer->canCastShadow() ? "Yes" : "No");
+			ImGui::Text("Submeshes");
+			ImGui::SameLine();
+			ImGui::TextDisabled("%d", submeshCount);
+			ImGui::Text("Material Slots");
+			ImGui::SameLine();
+			ImGui::TextDisabled("%d", materialCount);
+		}
+
+		if (!materialInstances.empty() && ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
+			for (size_t i = 0; i < materialInstances.size(); ++i) {
+				MaterialInstance* materialInstance = materialInstances[i];
+				if (!materialInstance) {
+					continue;
 				}
-				if (material->getDomain() == MaterialDomain::Transparent) {
-					static const char* kBlendModes[] = { "Opaque", "Alpha", "Additive", "Premultiplied" };
-					int currentBlendMode = static_cast<int>(material->getBlendMode());
-					if (ImGui::Combo("Blend Mode", &currentBlendMode, kBlendModes, IM_ARRAYSIZE(kBlendModes))) {
-						material->setBlendMode(static_cast<BlendMode>(currentBlendMode));
+
+				MaterialParams& params = materialInstance->getParams();
+				Material* material = materialInstance->getMaterial();
+				std::string header = "Material Slot " + std::to_string(i);
+				if (ImGui::TreeNode(header.c_str())) {
+					if (material) {
+						ImGui::TextDisabled("Domain: %s", GetMaterialDomainLabel(material->getDomain()));
+						if (material->getDomain() == MaterialDomain::Transparent) {
+							ImGui::TextDisabled("Blend: %s", GetBlendModeLabel(material->getBlendMode()));
+						}
+
+						static const char* kMaterialDomains[] = { "Opaque", "Masked", "Transparent" };
+						int currentDomain = static_cast<int>(material->getDomain());
+						if (ImGui::Combo(("Domain##" + std::to_string(i)).c_str(), &currentDomain, kMaterialDomains, IM_ARRAYSIZE(kMaterialDomains))) {
+							material->setDomain(static_cast<MaterialDomain>(currentDomain));
+						}
+
+						if (material->getDomain() == MaterialDomain::Transparent) {
+							static const char* kBlendModes[] = { "Opaque", "Alpha", "Additive", "Premultiplied" };
+							int currentBlendMode = static_cast<int>(material->getBlendMode());
+							if (ImGui::Combo(("Blend Mode##" + std::to_string(i)).c_str(), &currentBlendMode, kBlendModes, IM_ARRAYSIZE(kBlendModes))) {
+								material->setBlendMode(static_cast<BlendMode>(currentBlendMode));
+							}
+						}
 					}
+
+					ImGui::ColorEdit4(("Base Color##" + std::to_string(i)).c_str(), &params.baseColor.x);
+					ImGui::SliderFloat(("Metallic##" + std::to_string(i)).c_str(), &params.metallic, 0.0f, 1.0f);
+					ImGui::SliderFloat(("Roughness##" + std::to_string(i)).c_str(), &params.roughness, 0.0f, 1.0f);
+					ImGui::SliderFloat(("AO##" + std::to_string(i)).c_str(), &params.ao, 0.0f, 1.0f);
+					ImGui::SliderFloat(("Normal Scale##" + std::to_string(i)).c_str(), &params.normalScale, 0.0f, 2.0f);
+					if (material && material->getDomain() == MaterialDomain::Masked) {
+						ImGui::SliderFloat(("Alpha Cutoff##" + std::to_string(i)).c_str(), &params.alphaCutoff, 0.0f, 1.0f);
+					}
+					ImGui::TreePop();
 				}
 			}
-			ImGui::ColorEdit4("Base Color", &params.baseColor.x);
-			ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);
-			ImGui::SliderFloat("Roughness", &params.roughness, 0.0f, 1.0f);
-			ImGui::SliderFloat("AO", &params.ao, 0.0f, 1.0f);
-			ImGui::SliderFloat("Normal Scale", &params.normalScale, 0.0f, 2.0f);
-			if (material && material->getDomain() == MaterialDomain::Masked) {
-				ImGui::SliderFloat("Alpha Cutoff", &params.alphaCutoff, 0.0f, 1.0f);
-			}
+		}
+	}
+
+	if (lightComponent && ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+		LightData& light = lightComponent->getLightData();
+		ImGui::TextDisabled("%s", GetLightTypeLabel(light.type));
+		ImGui::ColorEdit3("Color", &light.color.x);
+		ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+		if (light.type == LightType::Directional || light.type == LightType::Spot) {
+			ImGui::SliderFloat3("Direction", &light.direction.x, -1.0f, 1.0f);
+		}
+		if (light.type == LightType::Point || light.type == LightType::Spot) {
+			ImGui::SliderFloat("Range", &light.range, 0.0f, 100.0f);
 		}
 	}
 	ImGui::End();
@@ -424,46 +502,59 @@ void
 GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 	ImGui::Begin("Hierarchy");
 
-	// Barra de búsqueda
+	ImGui::TextDisabled("Scene");
 	static ImGuiTextFilter filter;
-	filter.Draw("Search...", 180.0f); // Barra de búsqueda con ancho ajustable
+	filter.Draw("Search...", -1.0f);
 
 	ImGui::Separator();
 
-	// Recorrer y mostrar cada actor que pase el filtro de búsqueda
-	for (int i = 0; i < actors.size(); ++i) {
+	if (selectedActorIndex >= static_cast<int>(actors.size())) {
+		selectedActorIndex = actors.empty() ? -1 : static_cast<int>(actors.size()) - 1;
+	}
+
+	for (int i = 0; i < static_cast<int>(actors.size()); ++i) {
 		const auto& actor = actors[i];
-
-		// Obtener el nombre del actor o asignar un nombre genérico
 		std::string actorName = actor ? actor->getName() : "Actor";
-
-		// Verificar si el actor pasa el filtro de búsqueda
 		if (!filter.PassFilter(actorName.c_str())) {
-			continue; // Saltar actores que no coincidan con el filtro
+			continue;
 		}
 
-		// Si el actor es seleccionable
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-		if (selectedActorIndex == i)
-			flags |= ImGuiTreeNodeFlags_Selected;
+		auto meshRenderer = actor ? actor->getComponent<MeshRendererComponent>() : EU::TSharedPointer<MeshRendererComponent>();
+		auto lightComponent = actor ? actor->getComponent<LightComponent>() : EU::TSharedPointer<LightComponent>();
 
-		// Crear un nodo de árbol para cada actor
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "%s", actorName.c_str());
+		ImGui::PushID(i);
+		const bool isSelected = (selectedActorIndex == i);
+		if (isSelected) {
+			ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.32f, 0.58f, 0.70f));
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.22f, 0.38f, 0.66f, 0.85f));
+			ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.24f, 0.42f, 0.72f, 0.95f));
+		}
 
-		// Selección de actor
-		if (ImGui::IsItemClicked()) {
+		ImVec2 rowSize(ImGui::GetContentRegionAvail().x, 30.0f);
+		if (ImGui::Selectable("##actorRow", isSelected, ImGuiSelectableFlags_SpanAvailWidth, rowSize)) {
 			selectedActorIndex = i;
-			// Aquí puedes llamar a alguna función para mostrar los detalles del actor en otra ventana
 		}
 
-		// Mostrar nodos hijos si el nodo está abierto
-		if (nodeOpen) {
-			ImGui::Text("Position: %.2f, %.2f, %.2f", 
-				actor->getComponent<Transform>().get()->getPosition().x, 
-				actor->getComponent<Transform>().get()->getPosition().y, 
-				actor->getComponent<Transform>().get()->getPosition().z);
-			ImGui::TreePop();
+		ImVec2 min = ImGui::GetItemRectMin();
+		ImVec2 max = ImGui::GetItemRectMax();
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		drawList->AddText(ImVec2(min.x + 12.0f, min.y + 8.0f), ImGui::GetColorU32(ImGuiCol_Text), actorName.c_str());
+
+		float badgeX = max.x - 84.0f;
+		if (meshRenderer) {
+			drawList->AddRectFilled(ImVec2(badgeX, min.y + 6.0f), ImVec2(badgeX + 28.0f, min.y + 24.0f), IM_COL32(68, 118, 180, 180), 6.0f);
+			drawList->AddText(ImVec2(badgeX + 9.0f, min.y + 8.0f), IM_COL32(240, 244, 255, 255), "M");
+			badgeX += 40.0f;
 		}
+		if (lightComponent) {
+			drawList->AddRectFilled(ImVec2(badgeX, min.y + 6.0f), ImVec2(badgeX + 28.0f, min.y + 24.0f), IM_COL32(180, 142, 52, 180), 6.0f);
+			drawList->AddText(ImVec2(badgeX + 9.0f, min.y + 8.0f), IM_COL32(255, 248, 232, 255), "L");
+		}
+
+		if (isSelected) {
+			ImGui::PopStyleColor(3);
+		}
+		ImGui::PopID();
 	}
 
 	ImGui::End();
@@ -519,20 +610,15 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 	float snap[3] = { snapValue, snapValue, snapValue };
 	bool useSnap = ImGui::GetIO().KeyCtrl;
 
-	bool canManipulate = m_viewportHovered || m_viewportActive || m_isUsingGizmo;
-
-	if (canManipulate)
-	{
-		ImGuizmo::Manipulate(
-			vArr,
-			pArr,
-			mCurrentGizmoOperation,
-			mCurrentGizmoMode,
-			mArr,
-			nullptr,
-			useSnap ? snap : nullptr
-		);
-	}
+	ImGuizmo::Manipulate(
+		vArr,
+		pArr,
+		mCurrentGizmoOperation,
+		mCurrentGizmoMode,
+		mArr,
+		nullptr,
+		useSnap ? snap : nullptr
+	);
 
 	m_isUsingGizmo = ImGuizmo::IsUsing();
 
@@ -628,7 +714,10 @@ void GUI::drawStudioTopRibbon()
 			{
 				ImGui::MenuItem("New Place");
 				ImGui::MenuItem("Open Place");
-				ImGui::MenuItem("Save");
+				if (ImGui::MenuItem("Save", "Ctrl+S"))
+				{
+					m_requestSaveScene = true;
+				}
 				ImGui::Separator();
 				if (ImGui::MenuItem("Exit"))
 				{

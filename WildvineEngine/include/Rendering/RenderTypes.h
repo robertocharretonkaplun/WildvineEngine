@@ -92,6 +92,7 @@ struct
 RenderObject {
 	Mesh* mesh = nullptr;
 	MaterialInstance* materialInstance = nullptr;
+	std::vector<MaterialInstance*> materialInstances;
 	XMMATRIX world = XMMatrixIdentity();
 	bool castShadow = true;
 	bool transparent = false;

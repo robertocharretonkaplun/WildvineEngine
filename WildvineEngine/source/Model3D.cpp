@@ -1,8 +1,10 @@
 ﻿#include "Model3D.h"
 #include <chrono>
 #include <cstdint>
+#include <cmath>
 #include <fstream>
 #include <unordered_map>
+#include <sstream>
 
 namespace {
 constexpr uint32_t kModelCacheMagic = 0x48564D57; // WMVH
@@ -76,10 +78,6 @@ Model3D::load(const std::string& path) {
 
 bool Model3D::init()
 {
-	if (m_modelType != ModelType::FBX) {
-		return true;
-	}
-
 	m_meshes.clear();
 	textureFileNames.clear();
 
@@ -90,7 +88,13 @@ bool Model3D::init()
 	}
 
 	const auto begin = std::chrono::high_resolution_clock::now();
-	const std::vector<MeshComponent> loadedMeshes = LoadFBXModel(m_filePath);
+	std::vector<MeshComponent> loadedMeshes;
+	if (m_modelType == ModelType::FBX) {
+		loadedMeshes = LoadFBXModel(m_filePath);
+	}
+	else if (m_modelType == ModelType::OBJ) {
+		loadedMeshes = LoadOBJModel(m_filePath);
+	}
 	const auto end = std::chrono::high_resolution_clock::now();
 	const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
@@ -201,6 +205,250 @@ Model3D::LoadFBXModel(const std::string& filePath) {
 			return loadedMeshes;
 		}
 	}
+	return loadedMeshes;
+}
+
+std::vector<MeshComponent>
+Model3D::LoadOBJModel(const std::string& filePath) {
+	struct ObjIndex {
+		int position = -1;
+		int texcoord = -1;
+		int normal = -1;
+
+		bool operator==(const ObjIndex& other) const {
+			return position == other.position &&
+				texcoord == other.texcoord &&
+				normal == other.normal;
+		}
+	};
+
+	struct ObjIndexHasher {
+		size_t operator()(const ObjIndex& index) const {
+			size_t seed = static_cast<size_t>(index.position + 1);
+			seed ^= static_cast<size_t>(index.texcoord + 1) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= static_cast<size_t>(index.normal + 1) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
+
+	struct ObjMeshBuilder {
+		std::string name = "default";
+		std::vector<SimpleVertex> vertices;
+		std::vector<unsigned int> indices;
+		std::unordered_map<ObjIndex, unsigned int, ObjIndexHasher> vertexLookup;
+	};
+
+	auto fixIndex = [](int index, int count) -> int {
+		if (index > 0) return index - 1;
+		if (index < 0) return count + index;
+		return -1;
+	};
+
+	auto normalize = [](EU::Vector3& value) {
+		const float lengthSq = value.x * value.x + value.y * value.y + value.z * value.z;
+		if (lengthSq <= 1e-20f) {
+			value = EU::Vector3(0.0f, 1.0f, 0.0f);
+			return;
+		}
+		const float invLength = 1.0f / std::sqrt(lengthSq);
+		value.x *= invLength;
+		value.y *= invLength;
+		value.z *= invLength;
+	};
+
+	auto parseFaceVertex = [&](const std::string& token,
+		int positionCount,
+		int texcoordCount,
+		int normalCount) -> ObjIndex {
+		ObjIndex result{};
+		size_t firstSlash = token.find('/');
+		size_t secondSlash = token.find('/', firstSlash == std::string::npos ? token.size() : firstSlash + 1);
+
+		const std::string positionToken = token.substr(0, firstSlash);
+		const std::string texcoordToken =
+			(firstSlash == std::string::npos) ? std::string() :
+			(secondSlash == std::string::npos ? token.substr(firstSlash + 1) : token.substr(firstSlash + 1, secondSlash - firstSlash - 1));
+		const std::string normalToken = (secondSlash == std::string::npos) ? std::string() : token.substr(secondSlash + 1);
+
+		if (!positionToken.empty()) result.position = fixIndex(std::stoi(positionToken), positionCount);
+		if (!texcoordToken.empty()) result.texcoord = fixIndex(std::stoi(texcoordToken), texcoordCount);
+		if (!normalToken.empty()) result.normal = fixIndex(std::stoi(normalToken), normalCount);
+
+		return result;
+	};
+
+	auto computeTangents = [&](MeshComponent& mesh) {
+		for (size_t i = 0; i + 2 < mesh.m_index.size(); i += 3) {
+			SimpleVertex& v0 = mesh.m_vertex[mesh.m_index[i + 0]];
+			SimpleVertex& v1 = mesh.m_vertex[mesh.m_index[i + 1]];
+			SimpleVertex& v2 = mesh.m_vertex[mesh.m_index[i + 2]];
+
+			const EU::Vector3 edge1 = v1.Position - v0.Position;
+			const EU::Vector3 edge2 = v2.Position - v0.Position;
+			const float du1 = v1.TextureCoordinate.x - v0.TextureCoordinate.x;
+			const float dv1 = v1.TextureCoordinate.y - v0.TextureCoordinate.y;
+			const float du2 = v2.TextureCoordinate.x - v0.TextureCoordinate.x;
+			const float dv2 = v2.TextureCoordinate.y - v0.TextureCoordinate.y;
+			const float denominator = du1 * dv2 - du2 * dv1;
+			const float invDenominator = std::fabs(denominator) < 1e-8f ? 0.0f : 1.0f / denominator;
+
+			const EU::Vector3 tangent(
+				(edge1.x * dv2 - edge2.x * dv1) * invDenominator,
+				(edge1.y * dv2 - edge2.y * dv1) * invDenominator,
+				(edge1.z * dv2 - edge2.z * dv1) * invDenominator);
+			const EU::Vector3 bitangent(
+				(edge2.x * du1 - edge1.x * du2) * invDenominator,
+				(edge2.y * du1 - edge1.y * du2) * invDenominator,
+				(edge2.z * du1 - edge1.z * du2) * invDenominator);
+
+			v0.Tangent += tangent;
+			v1.Tangent += tangent;
+			v2.Tangent += tangent;
+			v0.Bitangent += bitangent;
+			v1.Bitangent += bitangent;
+			v2.Bitangent += bitangent;
+		}
+
+		for (SimpleVertex& vertex : mesh.m_vertex) {
+			normalize(vertex.Normal);
+
+			const float tangentDotNormal =
+				vertex.Tangent.x * vertex.Normal.x +
+				vertex.Tangent.y * vertex.Normal.y +
+				vertex.Tangent.z * vertex.Normal.z;
+			vertex.Tangent = vertex.Tangent - (vertex.Normal * tangentDotNormal);
+			normalize(vertex.Tangent);
+
+			vertex.Bitangent = EU::Vector3(
+				vertex.Normal.y * vertex.Tangent.z - vertex.Normal.z * vertex.Tangent.y,
+				vertex.Normal.z * vertex.Tangent.x - vertex.Normal.x * vertex.Tangent.z,
+				vertex.Normal.x * vertex.Tangent.y - vertex.Normal.y * vertex.Tangent.x);
+			normalize(vertex.Bitangent);
+		}
+	};
+
+	auto flushMesh = [&](ObjMeshBuilder& builder, std::vector<MeshComponent>& meshes) {
+		if (builder.indices.empty() || builder.vertices.empty()) {
+			builder = ObjMeshBuilder{};
+			return;
+		}
+
+		MeshComponent mesh;
+		mesh.m_name = builder.name;
+		mesh.m_vertex = std::move(builder.vertices);
+		mesh.m_index = std::move(builder.indices);
+		mesh.m_numVertex = static_cast<int>(mesh.m_vertex.size());
+		mesh.m_numIndex = static_cast<int>(mesh.m_index.size());
+		computeTangents(mesh);
+		meshes.push_back(std::move(mesh));
+		builder = ObjMeshBuilder{};
+	};
+
+	std::ifstream file(filePath);
+	if (!file.is_open()) {
+		ERROR("ModelLoader", "LoadOBJModel", ("Unable to open OBJ file: " + filePath).c_str());
+		return {};
+	}
+
+	std::vector<EU::Vector3> positions;
+	std::vector<EU::Vector2> texcoords;
+	std::vector<EU::Vector3> normals;
+	std::vector<MeshComponent> loadedMeshes;
+	ObjMeshBuilder currentMesh;
+	std::string currentGroupName = "default";
+	currentMesh.name = currentGroupName;
+
+	std::string line;
+	while (std::getline(file, line)) {
+		if (line.empty() || line[0] == '#') {
+			continue;
+		}
+
+		std::istringstream stream(line);
+		std::string command;
+		stream >> command;
+
+		if (command == "v") {
+			EU::Vector3 position;
+			stream >> position.x >> position.y >> position.z;
+			positions.push_back(position);
+		}
+		else if (command == "vt") {
+			EU::Vector2 uv;
+			stream >> uv.x >> uv.y;
+			uv.y = 1.0f - uv.y;
+			texcoords.push_back(uv);
+		}
+		else if (command == "vn") {
+			EU::Vector3 normal;
+			stream >> normal.x >> normal.y >> normal.z;
+			normalize(normal);
+			normals.push_back(normal);
+		}
+		else if (command == "g" || command == "o") {
+			flushMesh(currentMesh, loadedMeshes);
+			stream >> currentGroupName;
+			if (currentGroupName.empty()) {
+				currentGroupName = "default";
+			}
+			currentMesh.name = currentGroupName;
+		}
+		else if (command == "usemtl") {
+			if (!currentMesh.indices.empty()) {
+				flushMesh(currentMesh, loadedMeshes);
+			}
+			currentMesh.name = currentGroupName;
+		}
+		else if (command == "f") {
+			std::vector<unsigned int> polygonIndices;
+			std::string token;
+			while (stream >> token) {
+				const ObjIndex objIndex = parseFaceVertex(
+					token,
+					static_cast<int>(positions.size()),
+					static_cast<int>(texcoords.size()),
+					static_cast<int>(normals.size()));
+
+				auto it = currentMesh.vertexLookup.find(objIndex);
+				if (it == currentMesh.vertexLookup.end()) {
+					SimpleVertex vertex{};
+					if (objIndex.position >= 0 && objIndex.position < static_cast<int>(positions.size())) {
+						vertex.Position = positions[objIndex.position];
+					}
+					if (objIndex.texcoord >= 0 && objIndex.texcoord < static_cast<int>(texcoords.size())) {
+						vertex.TextureCoordinate = texcoords[objIndex.texcoord];
+					}
+					else {
+						vertex.TextureCoordinate = EU::Vector2(0.0f, 0.0f);
+					}
+					if (objIndex.normal >= 0 && objIndex.normal < static_cast<int>(normals.size())) {
+						vertex.Normal = normals[objIndex.normal];
+					}
+					else {
+						vertex.Normal = EU::Vector3(0.0f, 1.0f, 0.0f);
+					}
+					vertex.Tangent = EU::Vector3(0.0f, 0.0f, 0.0f);
+					vertex.Bitangent = EU::Vector3(0.0f, 0.0f, 0.0f);
+
+					const unsigned int newIndex = static_cast<unsigned int>(currentMesh.vertices.size());
+					currentMesh.vertices.push_back(vertex);
+					currentMesh.vertexLookup[objIndex] = newIndex;
+					polygonIndices.push_back(newIndex);
+				}
+				else {
+					polygonIndices.push_back(it->second);
+				}
+			}
+
+			for (size_t i = 1; i + 1 < polygonIndices.size(); ++i) {
+				currentMesh.indices.push_back(polygonIndices[0]);
+				currentMesh.indices.push_back(polygonIndices[i]);
+				currentMesh.indices.push_back(polygonIndices[i + 1]);
+			}
+		}
+	}
+
+	flushMesh(currentMesh, loadedMeshes);
 	return loadedMeshes;
 }
 

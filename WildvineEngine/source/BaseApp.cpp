@@ -1,5 +1,9 @@
 #include "BaseApp.h"
 #include "ResourceManager.h"
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <iomanip>
 
 HRESULT
 BaseApp::awake() {
@@ -32,6 +36,7 @@ BaseApp::run(HINSTANCE hInst, int nCmdShow) {
 	}
 	// 4) Initialize GUI
 	m_gui.init(m_window, m_device, m_deviceContext);
+	m_guiInitialized = true;
 
 	// Main message loop
 	MSG msg = {};
@@ -129,6 +134,7 @@ BaseApp::init() {
 
 	// Set CyberGun Actor
 	m_cyberGun = EU::MakeShared<Actor>(m_device);
+	m_drakefirePistol = EU::MakeShared<Actor>(m_device);
 
 	if (!m_cyberGun.isNull()) {
 		m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
@@ -176,6 +182,55 @@ BaseApp::init() {
 	}
 	else {
 		ERROR("Main", "InitDevice", "Failed to create cyber Gun Actor.");
+		return E_FAIL;
+	}
+
+	if (!m_drakefirePistol.isNull()) {
+		m_drakefireModel = new Model3D("Models/drakefire_pistol_low_OBJ/drakefire_pistol_low.obj", ModelType::OBJ);
+		if (!m_drakefireModel || !m_drakefireModel->load("Models/drakefire_pistol_low_OBJ/drakefire_pistol_low.obj")) {
+			ERROR("Main", "InitDevice", "Failed to load Drakefire pistol model.");
+			return E_FAIL;
+		}
+
+		hr = m_drakefireAlbedoSRV.init(m_device, "Textures/drakefire_pistol_low_Textures/base_albedo", JPG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire albedo texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_drakefireNormalSRV.init(m_device, "Textures/drakefire_pistol_low_Textures/base_normal", JPG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire normal texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_drakefireMetallicSRV.init(m_device, "Textures/drakefire_pistol_low_Textures/base_metallic", JPG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire metallic texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_drakefireRoughnessSRV.init(m_device, "Textures/drakefire_pistol_low_Textures/base_roughness", JPG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire roughness texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_drakefireAOSRV.init(m_device, "Textures/drakefire_pistol_low_Textures/base_AO", JPG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire AO texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		m_drakefirePistol->setName("Drakefire Pistol");
+		m_actors.push_back(m_drakefirePistol);
+		m_drakefirePistol->getComponent<Transform>()->setTransform(EU::Vector3(-2.5f, -1.90f, 9.5f),
+			EU::Vector3(-0.30f, 0.45f, 0.0f),
+			EU::Vector3(1.0f, 1.0f, 1.0f));
+	}
+	else {
+		ERROR("Main", "InitDevice", "Failed to create Drakefire pistol Actor.");
 		return E_FAIL;
 	}
 
@@ -242,6 +297,14 @@ BaseApp::init() {
 	m_pbrMaterial.setDepthStencilState(&m_defaultDepthStencil);
 	m_pbrMaterial.setSamplerState(&m_defaultSampler);
 	m_pbrMaterial.setDomain(MaterialDomain::Opaque);
+	m_pbrMaterial.setBlendMode(BlendMode::Opaque);
+
+	m_transparentPbrMaterial.setShader(&m_shaderProgram);
+	m_transparentPbrMaterial.setRasterizerState(&m_defaultRasterizer);
+	m_transparentPbrMaterial.setDepthStencilState(&m_defaultDepthStencil);
+	m_transparentPbrMaterial.setSamplerState(&m_defaultSampler);
+	m_transparentPbrMaterial.setDomain(MaterialDomain::Transparent);
+	m_transparentPbrMaterial.setBlendMode(BlendMode::Alpha);
 
 	m_cyberGunMaterial.setMaterial(&m_pbrMaterial);
 	m_cyberGunMaterial.setAlbedo(&m_AlbedoSRV);
@@ -255,6 +318,19 @@ BaseApp::init() {
 	m_cyberGunMaterial.getParams().ao = 1.0f;
 	m_cyberGunMaterial.getParams().normalScale = 1.0f;
 	m_cyberGunMaterial.getParams().alphaCutoff = 0.5f;
+
+	m_drakefireMaterial.setMaterial(&m_pbrMaterial);
+	m_drakefireMaterial.setAlbedo(&m_drakefireAlbedoSRV);
+	m_drakefireMaterial.setNormal(&m_drakefireNormalSRV);
+	m_drakefireMaterial.setMetallic(&m_drakefireMetallicSRV);
+	m_drakefireMaterial.setRoughness(&m_drakefireRoughnessSRV);
+	m_drakefireMaterial.setAO(&m_drakefireAOSRV);
+	m_drakefireMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_drakefireMaterial.getParams().metallic = 1.0f;
+	m_drakefireMaterial.getParams().roughness = 1.0f;
+	m_drakefireMaterial.getParams().ao = 1.0f;
+	m_drakefireMaterial.getParams().normalScale = 1.0f;
+	m_drakefireMaterial.getParams().alphaCutoff = 0.5f;
 
 	m_cyberGunRenderMesh.destroy();
 	for (const MeshComponent& meshComponent : m_model->GetMeshes()) {
@@ -274,7 +350,30 @@ BaseApp::init() {
 		}
 
 		submesh.indexCount = meshComponent.m_numIndex;
+		submesh.materialSlot = 0;
 		m_cyberGunRenderMesh.getSubmeshes().push_back(std::move(submesh));
+	}
+
+	m_drakefireRenderMesh.destroy();
+	for (const MeshComponent& meshComponent : m_drakefireModel->GetMeshes()) {
+		Submesh submesh{};
+		hr = submesh.vertexBuffer.init(m_device, meshComponent, D3D11_BIND_VERTEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire vertex buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		hr = submesh.indexBuffer.init(m_device, meshComponent, D3D11_BIND_INDEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Drakefire index buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		submesh.indexCount = meshComponent.m_numIndex;
+		submesh.materialSlot = 0;
+		m_drakefireRenderMesh.getSubmeshes().push_back(std::move(submesh));
 	}
 
 	EU::TSharedPointer<MeshRendererComponent> meshRenderer = m_cyberGun->getComponent<MeshRendererComponent>();
@@ -286,6 +385,16 @@ BaseApp::init() {
 	meshRenderer->setMaterialInstance(&m_cyberGunMaterial);
 	meshRenderer->setVisible(true);
 	meshRenderer->setCastShadow(true);
+
+	EU::TSharedPointer<MeshRendererComponent> drakefireMeshRenderer = m_drakefirePistol->getComponent<MeshRendererComponent>();
+	if (!drakefireMeshRenderer) {
+		drakefireMeshRenderer = EU::MakeShared<MeshRendererComponent>();
+		m_drakefirePistol->addComponent(drakefireMeshRenderer);
+	}
+	drakefireMeshRenderer->setMesh(&m_drakefireRenderMesh);
+	drakefireMeshRenderer->setMaterialInstance(&m_drakefireMaterial);
+	drakefireMeshRenderer->setVisible(true);
+	drakefireMeshRenderer->setCastShadow(true);
 
 	m_directionalLightActor = EU::MakeShared<Actor>(m_device);
 	if (!m_directionalLightActor.isNull()) {
@@ -304,6 +413,8 @@ BaseApp::init() {
 
 		m_sceneGraph.addEntity(m_directionalLightActor.get());
 	}
+
+	loadScene(getDefaultScenePath());
 
 	hr = m_editorViewportPass.init(m_device, 1280, 720);
 	if (FAILED(hr)) {
@@ -343,9 +454,17 @@ BaseApp::update(float deltaTime) {
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
 	m_gui.drawViewportPanel(m_editorViewportPass.getSRV());
-	m_gui.inspectorGeneral(m_actors[m_gui.selectedActorIndex]);
 	m_gui.outliner(m_actors);
-	m_gui.editTransform(m_camera, m_window, m_actors[m_gui.selectedActorIndex]);
+	EU::TSharedPointer<Actor> selectedActor;
+	if (m_gui.selectedActorIndex >= 0 &&
+		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
+		selectedActor = m_actors[m_gui.selectedActorIndex];
+	}
+	m_gui.inspectorGeneral(selectedActor);
+	m_gui.editTransform(m_camera, m_window, selectedActor);
+	if (m_gui.consumeSaveSceneRequest()) {
+		saveScene(getDefaultScenePath());
+	}
 
 	unsigned int desiredW = static_cast<unsigned int>(m_gui.m_viewportSize.x);
 	unsigned int desiredH = static_cast<unsigned int>(m_gui.m_viewportSize.y);
@@ -442,11 +561,17 @@ BaseApp::destroy() {
 	m_editorViewportPass.destroy();
 	m_forwardRenderer.destroy();
 	m_cyberGunRenderMesh.destroy();
+	m_drakefireRenderMesh.destroy();
 	m_AlbedoSRV.destroy();
 	m_MetallicSRV.destroy();
 	m_NormalSRV.destroy();
 	m_RoughnessSRV.destroy();
 	m_AOSRV.destroy();
+	m_drakefireAlbedoSRV.destroy();
+	m_drakefireNormalSRV.destroy();
+	m_drakefireMetallicSRV.destroy();
+	m_drakefireRoughnessSRV.destroy();
+	m_drakefireAOSRV.destroy();
 	m_defaultRasterizer.destroy();
 	m_defaultDepthStencil.destroy();
 	m_defaultSampler.destroy();
@@ -458,7 +583,14 @@ BaseApp::destroy() {
 	m_renderTargetView.destroy();
 	m_swapChain.destroy();
 	m_backBuffer.destroy();
-	m_gui.destroy();
+	if (m_guiInitialized) {
+		m_gui.destroy();
+		m_guiInitialized = false;
+	}
+	delete m_model;
+	m_model = nullptr;
+	delete m_drakefireModel;
+	m_drakefireModel = nullptr;
 	m_deviceContext.destroy();
 	m_device.destroy();
 }
@@ -582,5 +714,232 @@ void BaseApp::handleEditorViewportResize()
 	m_editorViewportPass.swap(newPass);
 
 	m_editorViewportResizePending = false;
+}
+
+std::string BaseApp::getDefaultScenePath() const
+{
+	CreateDirectoryA("Saved", nullptr);
+	return "Saved/DefaultScene.wvscene";
+}
+
+bool BaseApp::saveScene(const std::string& path)
+{
+	std::ofstream stream(path, std::ios::trunc);
+	if (!stream.is_open()) {
+		ERROR("Main", "saveScene", ("Failed to open scene file for writing: " + path).c_str());
+		return false;
+	}
+
+	stream << "WVSCENE 1\n";
+	stream << "ACTOR_COUNT " << m_actors.size() << "\n";
+
+	for (size_t actorIndex = 0; actorIndex < m_actors.size(); ++actorIndex) {
+		const EU::TSharedPointer<Actor>& actor = m_actors[actorIndex];
+		if (actor.isNull()) {
+			continue;
+		}
+
+		stream << "ACTOR " << actorIndex << " " << std::quoted(actor->getName()) << "\n";
+
+		EU::TSharedPointer<Transform> transform = actor->getComponent<Transform>();
+		if (transform) {
+			const EU::Vector3& position = transform->getPosition();
+			const EU::Vector3& rotation = transform->getRotation();
+			const EU::Vector3& scale = transform->getScale();
+			stream << "POSITION " << position.x << " " << position.y << " " << position.z << "\n";
+			stream << "ROTATION " << rotation.x << " " << rotation.y << " " << rotation.z << "\n";
+			stream << "SCALE " << scale.x << " " << scale.y << " " << scale.z << "\n";
+		}
+
+		EU::TSharedPointer<MeshRendererComponent> meshRenderer = actor->getComponent<MeshRendererComponent>();
+		if (meshRenderer) {
+			stream << "VISIBLE " << (meshRenderer->isVisible() ? 1 : 0) << "\n";
+			stream << "CAST_SHADOW " << (meshRenderer->canCastShadow() ? 1 : 0) << "\n";
+
+			const std::vector<MaterialInstance*>& materials = meshRenderer->getMaterialInstances();
+			stream << "MATERIAL_COUNT " << materials.size() << "\n";
+			for (size_t i = 0; i < materials.size(); ++i) {
+				MaterialInstance* materialInstance = materials[i];
+				if (!materialInstance) {
+					stream << "MATERIAL " << i << " 0 0 1 1 1 1 0 1 1 1 0.5\n";
+					continue;
+				}
+
+				Material* material = materialInstance->getMaterial();
+				const MaterialParams& params = materialInstance->getParams();
+				const int domain = material ? static_cast<int>(material->getDomain()) : 0;
+				const int blendMode = material ? static_cast<int>(material->getBlendMode()) : 0;
+
+				stream << "MATERIAL " << i << " "
+					<< domain << " "
+					<< blendMode << " "
+					<< params.baseColor.x << " "
+					<< params.baseColor.y << " "
+					<< params.baseColor.z << " "
+					<< params.baseColor.w << " "
+					<< params.metallic << " "
+					<< params.roughness << " "
+					<< params.ao << " "
+					<< params.normalScale << " "
+					<< params.alphaCutoff << "\n";
+			}
+		}
+
+		stream << "END_ACTOR\n";
+	}
+
+	stream << "LIGHT "
+		<< m_constantBufferStruct.LightDir.x << " "
+		<< m_constantBufferStruct.LightDir.y << " "
+		<< m_constantBufferStruct.LightDir.z << " "
+		<< m_constantBufferStruct.LightColor.x << " "
+		<< m_constantBufferStruct.LightColor.y << " "
+		<< m_constantBufferStruct.LightColor.z << "\n";
+
+	stream << "END_SCENE\n";
+	const std::wstring pathW(path.begin(), path.end());
+	MESSAGE("Main", "saveScene", L"Saved scene to '" << pathW << L"'")
+	return true;
+}
+
+bool BaseApp::loadScene(const std::string& path)
+{
+	std::ifstream stream(path);
+	if (!stream.is_open()) {
+		return false;
+	}
+
+	std::string token;
+	stream >> token;
+	if (token != "WVSCENE") {
+		return false;
+	}
+
+	int version = 0;
+	stream >> version;
+	if (version != 1) {
+		return false;
+	}
+
+	EU::TSharedPointer<Actor> currentActor;
+	while (stream >> token) {
+		if (token == "ACTOR_COUNT") {
+			size_t ignoredCount = 0;
+			stream >> ignoredCount;
+		}
+		else if (token == "ACTOR") {
+			size_t actorIndex = 0;
+			std::string actorName;
+			stream >> actorIndex >> std::quoted(actorName);
+			currentActor = EU::TSharedPointer<Actor>();
+			if (actorIndex < m_actors.size()) {
+				currentActor = m_actors[actorIndex];
+			}
+			if (!currentActor.isNull()) {
+				currentActor->setName(actorName);
+			}
+		}
+		else if (token == "POSITION" && !currentActor.isNull()) {
+			float x = 0.0f, y = 0.0f, z = 0.0f;
+			stream >> x >> y >> z;
+			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			if (transform) {
+				transform->setPosition(EU::Vector3(x, y, z));
+			}
+		}
+		else if (token == "ROTATION" && !currentActor.isNull()) {
+			float x = 0.0f, y = 0.0f, z = 0.0f;
+			stream >> x >> y >> z;
+			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			if (transform) {
+				transform->setRotation(EU::Vector3(x, y, z));
+			}
+		}
+		else if (token == "SCALE" && !currentActor.isNull()) {
+			float x = 1.0f, y = 1.0f, z = 1.0f;
+			stream >> x >> y >> z;
+			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			if (transform) {
+				transform->setScale(EU::Vector3(x, y, z));
+			}
+		}
+		else if (token == "VISIBLE" && !currentActor.isNull()) {
+			int value = 1;
+			stream >> value;
+			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			if (meshRenderer) {
+				meshRenderer->setVisible(value != 0);
+			}
+		}
+		else if (token == "CAST_SHADOW" && !currentActor.isNull()) {
+			int value = 1;
+			stream >> value;
+			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			if (meshRenderer) {
+				meshRenderer->setCastShadow(value != 0);
+			}
+		}
+		else if (token == "MATERIAL_COUNT") {
+			size_t ignoredCount = 0;
+			stream >> ignoredCount;
+		}
+		else if (token == "MATERIAL" && !currentActor.isNull()) {
+			size_t materialIndex = 0;
+			int domain = 0;
+			int blendMode = 0;
+			MaterialParams params{};
+			stream >> materialIndex
+				>> domain
+				>> blendMode
+				>> params.baseColor.x
+				>> params.baseColor.y
+				>> params.baseColor.z
+				>> params.baseColor.w
+				>> params.metallic
+				>> params.roughness
+				>> params.ao
+				>> params.normalScale
+				>> params.alphaCutoff;
+
+			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			if (meshRenderer) {
+				const std::vector<MaterialInstance*>& materials = meshRenderer->getMaterialInstances();
+				if (materialIndex < materials.size() && materials[materialIndex]) {
+					materials[materialIndex]->getParams() = params;
+					Material* material = materials[materialIndex]->getMaterial();
+					if (material) {
+						material->setDomain(static_cast<MaterialDomain>(domain));
+						material->setBlendMode(static_cast<BlendMode>(blendMode));
+					}
+				}
+			}
+		}
+		else if (token == "LIGHT") {
+			stream >> m_constantBufferStruct.LightDir.x
+				>> m_constantBufferStruct.LightDir.y
+				>> m_constantBufferStruct.LightDir.z
+				>> m_constantBufferStruct.LightColor.x
+				>> m_constantBufferStruct.LightColor.y
+				>> m_constantBufferStruct.LightColor.z;
+
+			if (!m_directionalLightActor.isNull()) {
+				EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
+				if (lightComponent) {
+					lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
+					lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
+				}
+			}
+		}
+		else if (token == "END_ACTOR") {
+			currentActor = EU::TSharedPointer<Actor>();
+		}
+		else if (token == "END_SCENE") {
+			break;
+		}
+	}
+
+	const std::wstring pathW(path.begin(), path.end());
+	MESSAGE("Main", "loadScene", L"Loaded scene from '" << pathW << L"'")
+	return true;
 }
 

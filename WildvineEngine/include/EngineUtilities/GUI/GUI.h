@@ -69,7 +69,6 @@ public:
   void 
   drawGizmoToolbar();
 
-  // Crea una función auxiliar para convertir XMMATRIX a lo que ImGuizmo quiere
   void ToFloatArray(const XMMATRIX& mat, float* dest) {
     XMFLOAT4X4 temp;
     XMStoreFloat4x4(&temp, mat);
@@ -83,6 +82,13 @@ public:
 
   void drawEditorDockspace();
 
+  bool
+  consumeSaveSceneRequest() {
+    const bool requested = m_requestSaveScene;
+    m_requestSaveScene = false;
+    return requested;
+  }
+
 private:
 
   bool checkboxValue = true;
@@ -91,6 +97,7 @@ private:
   std::vector<const char*> m_tooltips;
 
   bool show_exit_popup = false; // Variable de estado para el popup
+  bool m_requestSaveScene = false;
   ImDrawList* m_viewportDrawList = nullptr;
   bool m_viewportActive = false;
 

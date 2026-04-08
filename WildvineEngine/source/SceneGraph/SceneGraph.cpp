@@ -236,6 +236,7 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 		RenderObject renderObject{};
 		renderObject.mesh = meshRenderer->getMesh();
 		renderObject.materialInstance = meshRenderer->getMaterialInstance();
+		renderObject.materialInstances = meshRenderer->getMaterialInstances();
 		renderObject.world = transform->worldMatrix;
 		renderObject.castShadow = meshRenderer->canCastShadow();
 

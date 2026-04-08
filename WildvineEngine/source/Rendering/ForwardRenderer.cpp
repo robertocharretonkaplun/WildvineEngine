@@ -170,57 +170,67 @@ void
 ForwardRenderer::renderObject(DeviceContext& deviceContext,
 	const RenderObject& object,
 	RenderPassType passType) {
-	if (!object.mesh || !object.materialInstance) {
+	if (!object.mesh || (!object.materialInstance && object.materialInstances.empty())) {
 		return;
 	}
-
-	Material* material = object.materialInstance->getMaterial();
-	if (!material) {
-		return;
-	}
-
-	if (material->getRasterizerState()) {
-		material->getRasterizerState()->render(deviceContext);
-	}
-
-	if (passType == RenderPassType::Transparent) {
-		m_transparentDepthStencil.render(deviceContext, 0, false);
-	}
-	else if (material->getDepthStencilState()) {
-		material->getDepthStencilState()->render(deviceContext, 0, false);
-	}
-
-	if (material->getShader()) {
-		material->getShader()->render(deviceContext);
-	}
-
-	if (material->getSamplerState()) {
-		material->getSamplerState()->render(deviceContext, 0, 1);
-	}
-
-	object.materialInstance->bindTextures(deviceContext);
 
 	XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(object.world));
 	m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
 	m_perObjectBuffer.render(deviceContext, 1, 1, true);
 
-	const MaterialParams& params = object.materialInstance->getParams();
-	m_cbPerMaterial.BaseColor = params.baseColor;
-	m_cbPerMaterial.Metallic = params.metallic;
-	m_cbPerMaterial.Roughness = params.roughness;
-	m_cbPerMaterial.AO = params.ao;
-	m_cbPerMaterial.NormalScale = params.normalScale;
-	m_cbPerMaterial.AlphaCutoff = 0.0f;
-	if (material->getDomain() == MaterialDomain::Masked) {
-		m_cbPerMaterial.AlphaCutoff = params.alphaCutoff;
-	}
-	m_perMaterialBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerMaterial, 0, 0);
-	m_perMaterialBuffer.render(deviceContext, 2, 1, true);
-
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	std::vector<Submesh>& submeshes = object.mesh->getSubmeshes();
 	for (Submesh& submesh : submeshes) {
+		MaterialInstance* materialInstance = object.materialInstance;
+		if (submesh.materialSlot < object.materialInstances.size() &&
+			object.materialInstances[submesh.materialSlot]) {
+			materialInstance = object.materialInstances[submesh.materialSlot];
+		}
+
+		if (!materialInstance) {
+			continue;
+		}
+
+		Material* material = materialInstance->getMaterial();
+		if (!material) {
+			continue;
+		}
+
+		if (material->getRasterizerState()) {
+			material->getRasterizerState()->render(deviceContext);
+		}
+
+		if (passType == RenderPassType::Transparent) {
+			m_transparentDepthStencil.render(deviceContext, 0, false);
+		}
+		else if (material->getDepthStencilState()) {
+			material->getDepthStencilState()->render(deviceContext, 0, false);
+		}
+
+		if (material->getShader()) {
+			material->getShader()->render(deviceContext);
+		}
+
+		if (material->getSamplerState()) {
+			material->getSamplerState()->render(deviceContext, 0, 1);
+		}
+
+		materialInstance->bindTextures(deviceContext);
+
+		const MaterialParams& params = materialInstance->getParams();
+		m_cbPerMaterial.BaseColor = params.baseColor;
+		m_cbPerMaterial.Metallic = params.metallic;
+		m_cbPerMaterial.Roughness = params.roughness;
+		m_cbPerMaterial.AO = params.ao;
+		m_cbPerMaterial.NormalScale = params.normalScale;
+		m_cbPerMaterial.AlphaCutoff = 0.0f;
+		if (material->getDomain() == MaterialDomain::Masked) {
+			m_cbPerMaterial.AlphaCutoff = params.alphaCutoff;
+		}
+		m_perMaterialBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerMaterial, 0, 0);
+		m_perMaterialBuffer.render(deviceContext, 2, 1, true);
+
 		submesh.vertexBuffer.render(deviceContext, 0, 1);
 		submesh.indexBuffer.render(deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
 		deviceContext.DrawIndexed(submesh.indexCount, submesh.startIndex, 0);

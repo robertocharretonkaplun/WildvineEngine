@@ -27,6 +27,7 @@
 #include "Rendering/Mesh.h"
 #include "Rendering/ForwardRenderer.h"
 #include "Rendering/RenderScene.h"
+#include <string>
 extern IMGUI_IMPL_API
 LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -58,6 +59,10 @@ public:
 	onResize(unsigned int newW, unsigned int newH);
 
 	void handleEditorViewportResize();
+
+	bool saveScene(const std::string& path);
+	bool loadScene(const std::string& path);
+	std::string getDefaultScenePath() const;
 private:
 	static LRESULT CALLBACK 
 	WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -86,20 +91,28 @@ private:
 	Texture m_RoughnessSRV;
 	Texture m_AOSRV;
 	Texture m_NormalSRV;
+	Texture m_drakefireAlbedoSRV;
+	Texture m_drakefireNormalSRV;
+	Texture m_drakefireMetallicSRV;
+	Texture m_drakefireRoughnessSRV;
+	Texture m_drakefireAOSRV;
 
 	Camera															m_camera;
 
 	SceneGraph												m_sceneGraph;
 	std::vector<EU::TSharedPointer<Actor>> m_actors;
 	EU::TSharedPointer<Actor> m_cyberGun;
+	EU::TSharedPointer<Actor> m_drakefirePistol;
 	EU::TSharedPointer<Actor> m_directionalLightActor;
 
 	
 	Model3D*														m_model;
+	Model3D*														m_drakefireModel = nullptr;
 
 	//CBChangeOnResize										cbChangesOnResize;
 	//CBNeverChanges											cbNeverChanges;
 	GUI																m_gui;
+	bool m_guiInitialized = false;
 	EU::Vector3 m_cameraPos;
 
 	Skybox m_skybox;
@@ -108,8 +121,11 @@ private:
 	DepthStencilState m_defaultDepthStencil;
 	SamplerState m_defaultSampler;
 	Mesh m_cyberGunRenderMesh;
+	Mesh m_drakefireRenderMesh;
 	Material m_pbrMaterial;
+	Material m_transparentPbrMaterial;
 	MaterialInstance m_cyberGunMaterial;
+	MaterialInstance m_drakefireMaterial;
 
 	EditorViewportPass m_editorViewportPass;
 	ForwardRenderer m_forwardRenderer;

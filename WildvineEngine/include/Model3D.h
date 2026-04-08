@@ -50,8 +50,11 @@ public:
 	bool
 	InitializeFBXManager();
 
-  std::vector<MeshComponent>
+	std::vector<MeshComponent>
 	LoadFBXModel(const std::string & filePath);
+
+	std::vector<MeshComponent>
+	LoadOBJModel(const std::string& filePath);
 
 	void 
   ProcessFBXNode(FbxNode* node);
