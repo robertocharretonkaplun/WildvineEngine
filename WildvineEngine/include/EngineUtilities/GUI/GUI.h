@@ -52,7 +52,8 @@ public:
   vec3Control(const std::string& label,
               float* values,
               float resetValues = 0.0f,
-              float columnWidth = 100.0f);
+              float columnWidth = 100.0f,
+              bool displayAsDegrees = false);
 
   void
   inspectorGeneral(EU::TSharedPointer<Actor> actor);
