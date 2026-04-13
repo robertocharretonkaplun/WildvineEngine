@@ -81,6 +81,10 @@ public:
 
   void drawViewportPanel(ID3D11ShaderResourceView* viewportSRV);
 
+  void drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
+                            ID3D11ShaderResourceView* finalViewportSRV,
+                            ID3D11ShaderResourceView* shadowMapSRV);
+
   void drawEditorDockspace();
 
   bool

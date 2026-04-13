@@ -1249,6 +1249,67 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 	ImGui::PopStyleVar();
 }
 
+void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
+	ID3D11ShaderResourceView* finalViewportSRV,
+	ID3D11ShaderResourceView* shadowMapSRV)
+{
+	ImGui::Begin("Render Debug");
+
+	struct DebugViewItem {
+		const char* label;
+		ID3D11ShaderResourceView* srv;
+	};
+
+	DebugViewItem items[] = {
+		{ "Pre-Shadow", preShadowSRV },
+		{ "Scene Final", finalViewportSRV },
+		{ "Shadow Map", shadowMapSRV }
+	};
+
+	static int selectedView = 0;
+	const float thumbnailHeight = 120.0f;
+
+	ImGui::TextDisabled("Generated pass textures");
+	ImGui::Separator();
+
+	for (int i = 0; i < IM_ARRAYSIZE(items); ++i) {
+		ImGui::PushID(i);
+		if (ImGui::Selectable(items[i].label, selectedView == i, 0, ImVec2(0.0f, 20.0f))) {
+			selectedView = i;
+		}
+
+		if (items[i].srv) {
+			const float thumbnailWidth = thumbnailHeight * 1.6f;
+			ImGui::Image((ImTextureID)items[i].srv, ImVec2(thumbnailWidth, thumbnailHeight));
+		}
+		else {
+			ImGui::Dummy(ImVec2(thumbnailHeight * 1.6f, thumbnailHeight));
+			ImGui::SameLine(0.0f, 0.0f);
+			ImGui::TextDisabled("Unavailable");
+		}
+
+		if (i + 1 < IM_ARRAYSIZE(items)) {
+			ImGui::Separator();
+		}
+		ImGui::PopID();
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Focused View: %s", items[selectedView].label);
+
+	ImVec2 available = ImGui::GetContentRegionAvail();
+	if (items[selectedView].srv && available.x > 16.0f && available.y > 16.0f) {
+		ImGui::Image((ImTextureID)items[selectedView].srv, available);
+	}
+	else {
+		ImGui::Dummy(available);
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::TextDisabled("No texture bound for this view");
+	}
+
+	ImGui::End();
+}
+
 void GUI::drawEditorDockspace()
 {
 	ImGuiViewport* mainViewport = ImGui::GetMainViewport();

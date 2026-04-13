@@ -462,6 +462,7 @@ BaseApp::update(float deltaTime) {
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
 	m_gui.drawViewportPanel(m_editorViewportPass.getSRV());
+	m_gui.drawRenderDebugPanel(m_forwardRenderer.getPreShadowSRV(), m_editorViewportPass.getSRV(), m_forwardRenderer.getShadowMapSRV());
 	m_gui.outliner(m_actors);
 	EU::TSharedPointer<Actor> selectedActor;
 	if (m_gui.selectedActorIndex >= 0 &&
@@ -721,6 +722,7 @@ void BaseApp::handleEditorViewportResize()
 
 	// Intercambio seguro: el pass viejo queda en newPass y se destruye al salir
 	m_editorViewportPass.swap(newPass);
+	m_forwardRenderer.resize(m_device, m_pendingViewportWidth, m_pendingViewportHeight);
 
 	m_editorViewportResizePending = false;
 }
