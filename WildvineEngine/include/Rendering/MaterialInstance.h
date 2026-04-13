@@ -15,6 +15,7 @@ public:
 	void setMetallic(Texture* texture) { m_metallic = texture; }
 	void setRoughness(Texture* texture) { m_roughness = texture; }
 	void setAO(Texture* texture) { m_ao = texture; }
+	void setEmissive(Texture* texture) { m_emissive = texture; }
 
 	Material* getMaterial() const { return m_material; }
 	Texture* getAlbedo() const { return m_albedo; }
@@ -22,6 +23,7 @@ public:
 	Texture* getMetallic() const { return m_metallic; }
 	Texture* getRoughness() const { return m_roughness; }
 	Texture* getAO() const { return m_ao; }
+	Texture* getEmissive() const { return m_emissive; }
 
 	MaterialParams& getParams() { return m_params; }
 	const MaterialParams& getParams() const { return m_params; }
@@ -35,5 +37,6 @@ private:
 	Texture* m_metallic = nullptr;
 	Texture* m_roughness = nullptr;
 	Texture* m_ao = nullptr;
+	Texture* m_emissive = nullptr;
 	MaterialParams m_params;
 };

@@ -224,6 +224,7 @@ ForwardRenderer::renderObject(DeviceContext& deviceContext,
 		m_cbPerMaterial.Roughness = params.roughness;
 		m_cbPerMaterial.AO = params.ao;
 		m_cbPerMaterial.NormalScale = params.normalScale;
+		m_cbPerMaterial.EmissiveStrength = params.emissiveStrength;
 		m_cbPerMaterial.AlphaCutoff = 0.0f;
 		if (material->getDomain() == MaterialDomain::Masked) {
 			m_cbPerMaterial.AlphaCutoff = params.alphaCutoff;

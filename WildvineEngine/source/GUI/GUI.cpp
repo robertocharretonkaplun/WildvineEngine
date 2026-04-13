@@ -671,6 +671,10 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 							ImGui::SliderFloat(("##AO" + std::to_string(i)).c_str(), &params.ao, 0.0f, 1.0f);
 							DrawPropertyLabel("Normal Scale");
 							ImGui::SliderFloat(("##NormalScale" + std::to_string(i)).c_str(), &params.normalScale, 0.0f, 2.0f);
+							if (materialInstance->getEmissive()) {
+								DrawPropertyLabel("Emissive Strength");
+								ImGui::SliderFloat(("##EmissiveStrength" + std::to_string(i)).c_str(), &params.emissiveStrength, 0.0f, 8.0f);
+							}
 							if (material->getDomain() == MaterialDomain::Masked) {
 								DrawPropertyLabel("Alpha Cutoff");
 								ImGui::SliderFloat(("##AlphaCutoff" + std::to_string(i)).c_str(), &params.alphaCutoff, 0.0f, 1.0f);

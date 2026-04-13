@@ -91,6 +91,7 @@ private:
 	Texture m_RoughnessSRV;
 	Texture m_AOSRV;
 	Texture m_NormalSRV;
+	Texture m_EmissiveSRV;
 	Texture m_drakefireAlbedoSRV;
 	Texture m_drakefireNormalSRV;
 	Texture m_drakefireMetallicSRV;

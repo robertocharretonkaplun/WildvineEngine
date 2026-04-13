@@ -55,6 +55,7 @@ MaterialParams {
 	float roughness = 1.0f;
 	float ao = 1.0f;
 	float normalScale = 1.0f;
+	float emissiveStrength = 1.0f;
 	float alphaCutoff = 0.5f;
 };
 
@@ -82,10 +83,14 @@ CBPerMaterial {
 	float Roughness = 1.0f;
 	float AO = 1.0f;
 	float NormalScale = 1.0f;
+	float EmissiveStrength = 1.0f;
 	float AlphaCutoff = 0.0f;
 	float pad0 = 0.0f;
 	float pad1 = 0.0f;
 	float pad2 = 0.0f;
+	float pad3 = 0.0f;
+	float pad4 = 0.0f;
+	float pad5 = 0.0f;
 };
 
 struct

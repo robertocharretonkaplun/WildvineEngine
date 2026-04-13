@@ -173,6 +173,10 @@ BaseApp::init() {
 				("Failed to initialize DrakePistol Texture. HRESULT: " + std::to_string(hr)).c_str());
 			return hr;
 		}
+		HRESULT emissiveHr = m_EmissiveSRV.init(m_device, "Textures/CyberGun/Emissive.tga", PNG);
+		if (FAILED(emissiveHr)) {
+			MESSAGE("Main", "InitDevice", "CyberGun emissive texture not found. Continuing without emissive map.");
+		}
 		m_cyberGun->setName("CyberGun");
 		m_actors.push_back(m_cyberGun);
 
@@ -312,11 +316,15 @@ BaseApp::init() {
 	m_cyberGunMaterial.setMetallic(&m_MetallicSRV);
 	m_cyberGunMaterial.setRoughness(&m_RoughnessSRV);
 	m_cyberGunMaterial.setAO(&m_AOSRV);
+	if (m_EmissiveSRV.m_textureFromImg) {
+		m_cyberGunMaterial.setEmissive(&m_EmissiveSRV);
+	}
 	m_cyberGunMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_cyberGunMaterial.getParams().metallic = 1.0f;
 	m_cyberGunMaterial.getParams().roughness = 1.0f;
 	m_cyberGunMaterial.getParams().ao = 1.0f;
 	m_cyberGunMaterial.getParams().normalScale = 1.0f;
+	m_cyberGunMaterial.getParams().emissiveStrength = 1.0f;
 	m_cyberGunMaterial.getParams().alphaCutoff = 0.5f;
 
 	m_drakefireMaterial.setMaterial(&m_pbrMaterial);
@@ -567,6 +575,7 @@ BaseApp::destroy() {
 	m_NormalSRV.destroy();
 	m_RoughnessSRV.destroy();
 	m_AOSRV.destroy();
+	m_EmissiveSRV.destroy();
 	m_drakefireAlbedoSRV.destroy();
 	m_drakefireNormalSRV.destroy();
 	m_drakefireMetallicSRV.destroy();
