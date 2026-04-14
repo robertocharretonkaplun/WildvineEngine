@@ -8,10 +8,10 @@ on:
       - "ForwardRendering+Shadows"
     paths:
       - ".github/workflows/doxygen-pages.yml"
-      - "docs/doxygen/**"
-      - "include/**"
-      - "source/**"
-      - "WildvineEngine.cpp"
+      - "WildvineEngine/docs/doxygen/**"
+      - "WildvineEngine/include/**"
+      - "WildvineEngine/source/**"
+      - "WildvineEngine/WildvineEngine.cpp"
   workflow_dispatch:
 
 permissions:
@@ -37,10 +37,11 @@ jobs:
           sudo apt-get install -y doxygen graphviz
 
       - name: Generate HTML documentation
+        working-directory: WildvineEngine
         run: doxygen docs/doxygen/Doxyfile
 
       - name: Disable Jekyll for GitHub Pages
-        run: touch docs/generated/html/.nojekyll
+        run: touch WildvineEngine/docs/generated/html/.nojekyll
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -48,7 +49,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/generated/html
+          path: WildvineEngine/docs/generated/html
 
   deploy:
     needs: build
