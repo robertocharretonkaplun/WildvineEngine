@@ -1,3 +1,8 @@
+/**
+ * @file EditorViewportPass.cpp
+ * @brief Implementa la logica de EditorViewportPass dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #include "EngineUtilities\Utilities\EditorViewportPass.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -124,3 +129,4 @@ void EditorViewportPass::destroy()
 	m_width = 1;
 	m_height = 1;
 }
+

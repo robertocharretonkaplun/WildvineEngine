@@ -1,3 +1,8 @@
+/**
+ * @file Entity.h
+ * @brief Declara la API de Entity dentro del subsistema ECS.
+ * @ingroup ecs
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "Component.h"
@@ -80,3 +85,5 @@ protected:
   int m_id;
   std::vector<EU::TSharedPointer<Component>> m_components;
 };
+
+

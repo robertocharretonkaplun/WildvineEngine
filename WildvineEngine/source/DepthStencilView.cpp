@@ -1,3 +1,8 @@
+/**
+ * @file DepthStencilView.cpp
+ * @brief Implementa la logica de DepthStencilView dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "DepthStencilView.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -89,3 +94,4 @@ void
 DepthStencilView::destroy() {
 	SAFE_RELEASE(m_depthStencilView);
 }
+

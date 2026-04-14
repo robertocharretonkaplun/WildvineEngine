@@ -1,3 +1,8 @@
+/**
+ * @file Actor.cpp
+ * @brief Implementa la logica de Actor dentro del subsistema ECS.
+ * @ingroup ecs
+ */
 #include "ECS/Actor.h"
 #include "MeshComponent.h"
 #include "Device.h"
@@ -169,3 +174,5 @@ Actor::setMesh(Device& device, std::vector<MeshComponent> meshes) {
 		}
 	}
 }
+
+

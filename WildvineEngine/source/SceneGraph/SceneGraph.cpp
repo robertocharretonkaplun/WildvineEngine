@@ -1,4 +1,9 @@
-ï»¿#include "SceneGraph\SceneGraph.h"
+/**
+ * @file SceneGraph.cpp
+ * @brief Implementa la logica de SceneGraph dentro del subsistema SceneGraph.
+ * @ingroup scenegraph
+ */
+#include "SceneGraph\SceneGraph.h"
 #include "SceneGraph\HierarchyComponent.h"
 #include "ECS\Entity.h"
 #include "ECS\Transform.h"
@@ -126,7 +131,7 @@ SceneGraph::attach(Entity* child, Entity* parent)
 	if (!child || !parent) return false;
 	if (child == parent) return false;
 
-	// Registro automÃ¡tico
+	// Registro automático
 	addEntity(child);
 	addEntity(parent);
 
@@ -175,7 +180,7 @@ SceneGraph::update(float deltaTime, DeviceContext& deviceContext) {
 		e->update(deltaTime, deviceContext);
 	}
 
-	// 2) PropagaciÃ³n World: procesa roots
+	// 2) Propagación World: procesa roots
 	for (Entity* e : m_entities)
 	{
 		if (!e) continue;
@@ -264,4 +269,6 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 		}
 	}
 }
+
+
 

@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file Material.h
+ * @brief Declara la API de Material dentro del subsistema Rendering.
+ * @ingroup rendering
+ */
+#pragma once
 #include "Prerequisites.h"
 #include "Rendering/RenderTypes.h"
 
@@ -7,6 +12,13 @@ class RasterizerState;
 class DepthStencilState;
 class SamplerState;
 
+/**
+ * @class Material
+ * @brief Describe el estado fijo compartido por una o mas instancias de material.
+ *
+ * Un `Material` apunta a shader, estados de rasterizacion/profundidad y al modo de
+ * mezcla que debe aplicar el renderer al dibujar una superficie.
+ */
 class
 Material {
 public:
@@ -25,10 +37,12 @@ public:
 	BlendMode getBlendMode() const { return m_blendMode; }
 
 private:
-	ShaderProgram* m_shader = nullptr;
-	RasterizerState* m_rasterizerState = nullptr;
-	DepthStencilState* m_depthStencilState = nullptr;
-	SamplerState* m_samplerState = nullptr;
-	MaterialDomain m_domain = MaterialDomain::Opaque;
-	BlendMode m_blendMode = BlendMode::Opaque;
+	ShaderProgram* m_shader = nullptr;                   ///< Shader principal del material.
+	RasterizerState* m_rasterizerState = nullptr;        ///< Estado de rasterizacion asociado.
+	DepthStencilState* m_depthStencilState = nullptr;    ///< Estado de profundidad/estencil asociado.
+	SamplerState* m_samplerState = nullptr;              ///< Sampler por defecto para texturas del material.
+	MaterialDomain m_domain = MaterialDomain::Opaque;    ///< Dominio de render del material.
+	BlendMode m_blendMode = BlendMode::Opaque;           ///< Modo de mezcla solicitado por el material.
 };
+
+

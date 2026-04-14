@@ -1,3 +1,8 @@
+/**
+ * @file TUniquePtr.h
+ * @brief Declara la API de TUniquePtr dentro del subsistema Memory.
+ * @ingroup memory
+ */
 /*
  * MIT License
  *
@@ -231,3 +236,4 @@ namespace EU {
   }
   */
 }
+

@@ -1,3 +1,8 @@
+/**
+ * @file RasterizerState.cpp
+ * @brief Implementa la logica de RasterizerState dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "RasterizerState.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -64,3 +69,4 @@ void
 RasterizerState::destroy() {
 	SAFE_RELEASE(m_rasterizerState);
 }
+

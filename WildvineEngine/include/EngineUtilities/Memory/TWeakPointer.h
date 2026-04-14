@@ -1,3 +1,8 @@
+/**
+ * @file TWeakPointer.h
+ * @brief Declara la API de TWeakPointer dentro del subsistema Memory.
+ * @ingroup memory
+ */
 /*
  * MIT License
  *
@@ -145,3 +150,4 @@ int main()
 }
 	*/
 }
+

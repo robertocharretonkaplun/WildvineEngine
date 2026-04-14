@@ -1,3 +1,8 @@
+/**
+ * @file Vector4.h
+ * @brief Declara la API de Vector4 dentro del subsistema Math.
+ * @ingroup math
+ */
 /*
  * MIT License
  *
@@ -125,3 +130,5 @@ namespace EU {
     }
   };
 }
+
+

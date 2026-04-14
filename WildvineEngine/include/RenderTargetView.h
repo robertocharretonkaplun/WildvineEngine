@@ -1,3 +1,8 @@
+/**
+ * @file RenderTargetView.h
+ * @brief Declara la API de RenderTargetView dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -110,3 +115,4 @@ private:
    */
   ID3D11RenderTargetView* m_renderTargetView = nullptr;
 };
+

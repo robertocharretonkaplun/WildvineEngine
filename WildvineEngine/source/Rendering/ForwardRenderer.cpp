@@ -1,4 +1,9 @@
-﻿#include "Rendering/ForwardRenderer.h"
+/**
+ * @file ForwardRenderer.cpp
+ * @brief Implementa la logica de ForwardRenderer dentro del subsistema Rendering.
+ * @ingroup rendering
+ */
+#include "Rendering/ForwardRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include "Device.h"
@@ -491,6 +496,8 @@ ForwardRenderer::resolveBlendState(const Material* material) const {
 		return m_alphaBlendState ? m_alphaBlendState : m_opaqueBlendState;
 	}
 }
+
+
 
 
 

@@ -1,3 +1,8 @@
+/**
+ * @file Window.cpp
+ * @brief Implementa la logica de Window dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "Window.h"
 #include "Device.h"
 #include "BaseApp.h"
@@ -71,4 +76,6 @@ Window::render() {
 void 
 Window::destroy() {
 }
+
+
 

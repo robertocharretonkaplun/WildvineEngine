@@ -1,3 +1,8 @@
+/**
+ * @file Quaternion.h
+ * @brief Declara la API de Quaternion dentro del subsistema Math.
+ * @ingroup math
+ */
 /*
  * MIT License
  *
@@ -233,3 +238,5 @@ namespace EU {
 		}*/
 	};
 }
+
+

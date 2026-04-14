@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file LightComponent.h
+ * @brief Declara la API de LightComponent dentro del subsistema ECS.
+ * @ingroup ecs
+ */
+#pragma once
 #include "Prerequisites.h"
 #include "ECS/Component.h"
 #include "Rendering/RenderTypes.h"
@@ -26,3 +31,5 @@ private:
 	LightData m_light;
 	bool m_castShadow = false;
 };
+
+

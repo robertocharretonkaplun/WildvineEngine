@@ -1,3 +1,8 @@
+/**
+ * @file TArray.h
+ * @brief Declara la API de TArray dentro del subsistema Structures.
+ * @ingroup structures
+ */
 /*
  * MIT License
  *
@@ -190,3 +195,4 @@ namespace EU {
 	}
 	*/
 }
+

@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file BaseApp.h
+ * @brief Declara la API de BaseApp dentro del subsistema Core.
+ * @ingroup core
+ */
+#pragma once
 #include "Prerequisites.h"
 #include "Window.h"
 #include "Device.h"
@@ -31,37 +36,92 @@
 extern IMGUI_IMPL_API
 LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @class BaseApp
+ * @brief Coordina el ciclo de vida principal de Wildvine Engine.
+ *
+ * `BaseApp` inicializa la ventana, el dispositivo grafico, la interfaz del editor,
+ * la escena de prueba y el pipeline de render. Tambien administra el bucle principal
+ * de actualizacion, la serializacion basica de escena y la respuesta a cambios de tamano.
+ */
 class 
 BaseApp {
 public:
 	BaseApp() = default;
 	~BaseApp() { destroy(); }
 
+	/**
+	 * @brief Prepara subsistemas previos al render.
+	 * @return `S_OK` si la aplicacion queda lista para continuar la inicializacion.
+	 */
 	HRESULT
 	awake();
 
+	/**
+	 * @brief Ejecuta el bucle principal de la aplicacion.
+	 * @param hInst Instancia Win32 actual.
+	 * @param nCmdShow Modo inicial de visualizacion de la ventana.
+	 * @return Codigo de salida del proceso.
+	 */
 	int 
 	run(HINSTANCE hInst, int nCmdShow);
 	
+	/**
+	 * @brief Inicializa recursos graficos, escena, materiales y renderer.
+	 * @return `S_OK` cuando todos los recursos base quedan listos.
+	 */
 	HRESULT
 	init();
 
+	/**
+	 * @brief Ejecuta la logica por frame y sincroniza GUI, camara y escena.
+	 * @param deltaTime Tiempo transcurrido desde el frame anterior.
+	 */
 	void 
 	update(float deltaTime);
 
+	/**
+	 * @brief Emite el frame actual en el viewport del editor y en el back buffer final.
+	 */
 	void 
 	render();
 
+	/**
+	 * @brief Libera recursos del motor en orden seguro de destruccion.
+	 */
 	void 
 	destroy();
 
+	/**
+	 * @brief Reconstuye recursos dependientes de la resolucion principal.
+	 * @param newW Nuevo ancho del area cliente.
+	 * @param newH Nuevo alto del area cliente.
+	 */
 	void 
 	onResize(unsigned int newW, unsigned int newH);
 
+	/**
+	 * @brief Atiende cambios diferidos del viewport interno del editor.
+	 */
 	void handleEditorViewportResize();
 
+	/**
+	 * @brief Serializa la escena actual a disco.
+	 * @param path Ruta de salida del archivo `.wvscene`.
+	 * @return `true` si la escena se guarda correctamente.
+	 */
 	bool saveScene(const std::string& path);
+
+	/**
+	 * @brief Carga una escena serializada previamente.
+	 * @param path Ruta del archivo `.wvscene`.
+	 * @return `true` si el contenido se pudo leer y aplicar.
+	 */
 	bool loadScene(const std::string& path);
+
+	/**
+	 * @brief Devuelve la ruta por defecto usada por el editor para persistencia rapida.
+	 */
 	std::string getDefaultScenePath() const;
 private:
 	static LRESULT CALLBACK 
@@ -139,4 +199,6 @@ private:
 	unsigned int m_lastRequestedViewportHeight = 1;
 	int m_viewportResizeStableFrames = 0;
 };
+
+
 

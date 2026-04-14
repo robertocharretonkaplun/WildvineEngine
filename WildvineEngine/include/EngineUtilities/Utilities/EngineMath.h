@@ -1,3 +1,8 @@
+/**
+ * @file EngineMath.h
+ * @brief Declara la API de EngineMath dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 /*
  * MIT License
  *
@@ -447,3 +452,5 @@ namespace EU {
   }
 
 }
+
+

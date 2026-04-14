@@ -1,3 +1,8 @@
+/**
+ * @file Buffer.h
+ * @brief Declara la API de Buffer dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "MeshComponent.h"
@@ -163,3 +168,5 @@ private:
    */
   unsigned int m_bindFlag = 0;
 };
+
+

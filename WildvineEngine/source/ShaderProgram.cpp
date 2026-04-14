@@ -1,3 +1,8 @@
+/**
+ * @file ShaderProgram.cpp
+ * @brief Implementa la logica de ShaderProgram dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "ShaderProgram.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -248,3 +253,4 @@ ShaderProgram::destroy() {
 	SAFE_RELEASE(m_vertexShaderData);
 	SAFE_RELEASE(m_pixelShaderData);
 }
+

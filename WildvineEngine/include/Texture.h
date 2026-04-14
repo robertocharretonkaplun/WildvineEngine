@@ -1,3 +1,8 @@
+/**
+ * @file Texture.h
+ * @brief Declara la API de Texture dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -169,3 +174,5 @@ public:
    */
   std::string m_textureName;
 };
+
+

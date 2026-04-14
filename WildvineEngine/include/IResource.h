@@ -1,3 +1,8 @@
+/**
+ * @file IResource.h
+ * @brief Declara la API de IResource dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -64,3 +69,4 @@ private:
 		return nextID++;
 	}
 };
+

@@ -1,3 +1,8 @@
+/**
+ * @file Viewport.h
+ * @brief Declara la API de Viewport dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -95,3 +100,5 @@ public:
    */
   D3D11_VIEWPORT m_viewport;
 };
+
+

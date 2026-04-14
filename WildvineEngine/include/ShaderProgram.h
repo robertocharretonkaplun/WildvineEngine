@@ -1,3 +1,8 @@
+/**
+ * @file ShaderProgram.h
+ * @brief Declara la API de ShaderProgram dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "InputLayout.h"
@@ -170,3 +175,5 @@ private:
    */
   ID3DBlob* m_pixelShaderData = nullptr;
 };
+
+

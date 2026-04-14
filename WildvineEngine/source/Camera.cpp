@@ -1,3 +1,8 @@
+/**
+ * @file Camera.cpp
+ * @brief Implementa la logica de Camera dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #include "EngineUtilities\Utilities\Camera.h"
 
 Camera::Camera() {
@@ -127,3 +132,5 @@ Camera::updateViewMatrix() {
 	XMStoreFloat4x4(&m_view, view);
 	m_viewDirty = false;
 }
+
+

@@ -1,3 +1,8 @@
+/**
+ * @file TPair.h
+ * @brief Declara la API de TPair dentro del subsistema Structures.
+ * @ingroup structures
+ */
 /*
  * MIT License
  *
@@ -145,3 +150,5 @@ namespace EU {
 	};
 
 }
+
+

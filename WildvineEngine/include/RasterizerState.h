@@ -1,3 +1,8 @@
+/**
+ * @file RasterizerState.h
+ * @brief Declara la API de RasterizerState dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -92,3 +97,5 @@ private:
    */
   ID3D11RasterizerState* m_rasterizerState = nullptr;
 };
+
+

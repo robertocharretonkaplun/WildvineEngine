@@ -1,3 +1,8 @@
+/**
+ * @file TMap.h
+ * @brief Declara la API de TMap dentro del subsistema Structures.
+ * @ingroup structures
+ */
 /*
  * MIT License
  *
@@ -214,3 +219,4 @@ namespace EU {
 	}
 	*/
 }
+

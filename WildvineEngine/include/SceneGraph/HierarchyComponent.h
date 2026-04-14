@@ -1,3 +1,8 @@
+/**
+ * @file HierarchyComponent.h
+ * @brief Declara la API de HierarchyComponent dentro del subsistema SceneGraph.
+ * @ingroup scenegraph
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "ECS/Component.h"
@@ -68,3 +73,4 @@ public:
 	Entity* m_parent = nullptr;
 	std::vector<Entity*> m_children;
 };
+

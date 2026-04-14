@@ -1,3 +1,8 @@
+/**
+ * @file InputLayout.cpp
+ * @brief Implementa la logica de InputLayout dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "InputLayout.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -51,3 +56,5 @@ void
 InputLayout::destroy() {
 	SAFE_RELEASE(m_inputLayout);
 }
+
+

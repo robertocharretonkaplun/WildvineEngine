@@ -1,3 +1,8 @@
+/**
+ * @file Actor.h
+ * @brief Declara la API de Actor dentro del subsistema ECS.
+ * @ingroup ecs
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "Entity.h"
@@ -166,3 +171,5 @@ private:
   std::string m_name = "Actor";          ///< Nombre identificador del actor.
   bool castShadow = true;                ///< Indica si el actor proyecta sombras.
 };
+
+

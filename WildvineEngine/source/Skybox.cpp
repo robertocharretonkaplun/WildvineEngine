@@ -1,3 +1,8 @@
+/**
+ * @file Skybox.cpp
+ * @brief Implementa la logica de Skybox dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #include "EngineUtilities/Utilities/Skybox.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -136,3 +141,5 @@ Skybox::render(DeviceContext& deviceContext) {
 	// 5) Unbind t10
 	deviceContext.m_deviceContext->PSSetShaderResources(0, 1, nullSRV);
 }
+
+

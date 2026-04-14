@@ -1,3 +1,8 @@
+/**
+ * @file Vector2.h
+ * @brief Declara la API de Vector2 dentro del subsistema Math.
+ * @ingroup math
+ */
 /*
  * MIT License
  *
@@ -126,3 +131,5 @@ namespace EU {
     }
   };
 }
+
+

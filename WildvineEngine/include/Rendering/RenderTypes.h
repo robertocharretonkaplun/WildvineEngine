@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file RenderTypes.h
+ * @brief Declara la API de RenderTypes dentro del subsistema Rendering.
+ * @ingroup rendering
+ */
+#pragma once
 #include "Prerequisites.h"
 
 class Mesh;
@@ -104,3 +109,5 @@ RenderObject {
 	bool transparent = false;
 	float distanceToCamera = 0.0f;
 };
+
+

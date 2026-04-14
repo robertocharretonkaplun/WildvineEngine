@@ -1,3 +1,8 @@
+/**
+ * @file SamplerState.cpp
+ * @brief Implementa la logica de SamplerState dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "SamplerState.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -50,3 +55,5 @@ SamplerState::destroy() {
     SAFE_RELEASE(m_sampler);
   }
 }
+
+

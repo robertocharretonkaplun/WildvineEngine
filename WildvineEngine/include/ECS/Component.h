@@ -1,3 +1,8 @@
+/**
+ * @file Component.h
+ * @brief Declara la API de Component dentro del subsistema ECS.
+ * @ingroup ecs
+ */
 #pragma once
 #include "Prerequisites.h"
 class DeviceContext;
@@ -58,3 +63,4 @@ public:
 protected:
   ComponentType m_type; ///< Tipo del componente.
 };
+

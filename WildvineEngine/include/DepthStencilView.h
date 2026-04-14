@@ -1,3 +1,8 @@
+/**
+ * @file DepthStencilView.h
+ * @brief Declara la API de DepthStencilView dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -90,3 +95,5 @@ public:
    */
   ID3D11DepthStencilView* m_depthStencilView = nullptr;
 };
+
+

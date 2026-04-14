@@ -1,3 +1,8 @@
+/**
+ * @file Vector3.h
+ * @brief Declara la API de Vector3 dentro del subsistema Math.
+ * @ingroup math
+ */
 /*
  * MIT License
  *
@@ -149,3 +154,5 @@ namespace EU {
 		const float* data() const { return &x; }
 	};
 }
+
+

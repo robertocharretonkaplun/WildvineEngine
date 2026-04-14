@@ -1,3 +1,8 @@
+/**
+ * @file TSharedPointer.h
+ * @brief Declara la API de TSharedPointer dentro del subsistema Memory.
+ * @ingroup memory
+ */
 /*
  * MIT License
  *
@@ -287,4 +292,6 @@ namespace EU {
 		return TSharedPointer<T>(new T(args...));
 	}
 }
+
+
 

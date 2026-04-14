@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file ForwardRenderer.h
+ * @brief Declara la API de ForwardRenderer dentro del subsistema Rendering.
+ * @ingroup rendering
+ */
+#pragma once
 #include "Prerequisites.h"
 #include "Buffer.h"
 #include "DepthStencilState.h"
@@ -15,16 +20,42 @@ class DeviceContext;
 class Camera;
 class Material;
 
+/**
+ * @class ForwardRenderer
+ * @brief Ejecuta el pipeline de render forward del motor.
+ *
+ * Esta clase construye colas opacas y transparentes, genera recursos de sombras,
+ * actualiza buffers por frame y compone el resultado final dentro del viewport del editor.
+ */
 class
 ForwardRenderer {
 public:
+	/**
+	 * @brief Inicializa buffers, shaders y estados del renderer.
+	 */
 	HRESULT init(Device& device);
+
+	/**
+	 * @brief Reconstuye los recursos dependientes del tamano del viewport.
+	 */
 	void resize(Device& device, unsigned int width, unsigned int height);
+
+	/**
+	 * @brief Actualiza constantes globales usadas por el frame actual.
+	 */
 	void updatePerFrame(const Camera& camera, const RenderScene& scene, DeviceContext& deviceContext);
+
+	/**
+	 * @brief Renderiza la escena completa sobre el `EditorViewportPass`.
+	 */
 	void render(DeviceContext& deviceContext,
 		const Camera& camera,
 		RenderScene& scene,
 		EditorViewportPass& viewportPass);
+
+	/**
+	 * @brief Libera los recursos internos del renderer.
+	 */
 	void destroy();
 	ID3D11ShaderResourceView* getShadowMapSRV() const { return m_shadowDepthSRV.m_textureFromImg; }
 	ID3D11ShaderResourceView* getPreShadowSRV() const { return m_preShadowDebugPass.getSRV(); }
@@ -69,3 +100,5 @@ private:
 	std::vector<const RenderObject*> m_opaqueQueue;
 	std::vector<const RenderObject*> m_transparentQueue;
 };
+
+

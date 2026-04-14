@@ -1,4 +1,9 @@
-Ôªø#include "EngineUtilities\GUI\GUI.h"
+/**
+ * @file GUI.cpp
+ * @brief Implementa la logica de GUI dentro del subsistema GUI.
+ * @ingroup gui
+ */
+#include "EngineUtilities\GUI\GUI.h"
 #include "Viewport.h"
 #include "Window.h"
 #include "Device.h"
@@ -364,7 +369,7 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4* colors = style.Colors;
 
-	// Geometr√≠a suave tipo macOS
+	// GeometrÌa suave tipo macOS
 	style.WindowRounding = 14.0f;
 	style.ChildRounding = 14.0f;
 	style.PopupRounding = 14.0f;
@@ -383,13 +388,13 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	style.ItemSpacing = ImVec2(8, 8);
 	style.ItemInnerSpacing = ImVec2(8, 6);
 
-	const float o = opacity;                 // opacidad del ‚Äúcristal‚Äù
+	const float o = opacity;                 // opacidad del ìcristalî
 	const ImVec4 txt = ImVec4(1, 1, 1, 0.95f);     // texto claro
-	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ‚Äúvidrioso‚Äù oscuro
+	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ìvidriosoî oscuro
 	const ImVec4 paneHi = ImVec4(0.20f, 0.20f, 0.22f, o);
 	const ImVec4 paneLo = ImVec4(0.13f, 0.13f, 0.15f, o * 0.85f);
 
-	// Colores base ‚Äúglass‚Äù
+	// Colores base ìglassî
 	colors[ImGuiCol_Text] = txt;
 	colors[ImGuiCol_TextDisabled] = ImVec4(1, 1, 1, 0.45f);
 	colors[ImGuiCol_WindowBg] = pane;     // importante: con alpha
@@ -458,16 +463,16 @@ GUI::ToolBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("New")) {
-				// Acci√≥n para "New"
+				// AcciÛn para "New"
 			}
 			if (ImGui::MenuItem("Open")) {
-				// Acci√≥n para "Open"
+				// AcciÛn para "Open"
 			}
 			if (ImGui::MenuItem("Save")) {
-				// Acci√≥n para "Save"
+				// AcciÛn para "Save"
 			}
 			if (ImGui::MenuItem("Exit")) {
-				// Acci√≥n para "Exit"
+				// AcciÛn para "Exit"
 				show_exit_popup = true;
 				ImGui::OpenPopup("Exit?");
 				//closeApp();
@@ -476,28 +481,28 @@ GUI::ToolBar() {
 		}
 		if (ImGui::BeginMenu("Edit")) {
 			if (ImGui::MenuItem("Undo")) {
-				// Acci√≥n para "Undo"
+				// AcciÛn para "Undo"
 			}
 			if (ImGui::MenuItem("Redo")) {
-				// Acci√≥n para "Redo"
+				// AcciÛn para "Redo"
 			}
 			if (ImGui::MenuItem("Cut")) {
-				// Acci√≥n para "Cut"
+				// AcciÛn para "Cut"
 			}
 			if (ImGui::MenuItem("Copy")) {
-				// Acci√≥n para "Copy"
+				// AcciÛn para "Copy"
 			}
 			if (ImGui::MenuItem("Paste")) {
-				// Acci√≥n para "Paste"
+				// AcciÛn para "Paste"
 			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools")) {
 			if (ImGui::MenuItem("Options")) {
-				// Acci√≥n para "Options"
+				// AcciÛn para "Options"
 			}
 			if (ImGui::MenuItem("Settings")) {
-				// Acci√≥n para "Settings"
+				// AcciÛn para "Settings"
 			}
 			ImGui::EndMenu();
 		}
@@ -520,7 +525,7 @@ GUI::closeApp() {
 		ImGui::Separator();
 
 		if (ImGui::Button("OK", ImVec2(120, 0))) {
-			exit(0); // Salir de la aplicaci√≥n
+			exit(0); // Salir de la aplicaciÛn
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -1353,5 +1358,4 @@ void GUI::drawEditorDockspace()
 
 	ImGui::PopStyleVar(3);
 }
-
 

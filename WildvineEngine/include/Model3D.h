@@ -1,3 +1,8 @@
+/**
+ * @file Model3D.h
+ * @brief Declara la API de Model3D dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "IResource.h"
@@ -82,3 +87,5 @@ public:
 	ModelType m_modelType;
 	std::vector<MeshComponent> m_meshes;
 };
+
+

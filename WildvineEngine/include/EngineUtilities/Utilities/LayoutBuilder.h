@@ -1,3 +1,8 @@
+/**
+ * @file LayoutBuilder.h
+ * @brief Declara la API de LayoutBuilder dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -43,3 +48,4 @@ public:
 private:
   std::vector<D3D11_INPUT_ELEMENT_DESC> m_elems;
 };
+

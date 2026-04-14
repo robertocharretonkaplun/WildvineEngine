@@ -1,3 +1,8 @@
+/**
+ * @file TSet.h
+ * @brief Declara la API de TSet dentro del subsistema Structures.
+ * @ingroup structures
+ */
 /*
  * MIT License
  *
@@ -181,3 +186,4 @@ namespace EU {
 	}
 	*/
 }
+

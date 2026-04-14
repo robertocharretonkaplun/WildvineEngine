@@ -1,3 +1,8 @@
+/**
+ * @file EditorViewportPass.h
+ * @brief Declara la API de EditorViewportPass dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "Texture.h"
@@ -48,3 +53,4 @@ private:
 	unsigned int      m_width = 1;
 	unsigned int      m_height = 1;
 };
+

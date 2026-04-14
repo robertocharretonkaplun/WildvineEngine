@@ -1,4 +1,9 @@
-﻿#define STB_IMAGE_IMPLEMENTATION
+/**
+ * @file Texture.cpp
+ * @brief Implementa la logica de Texture dentro del subsistema Core.
+ * @ingroup core
+ */
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "Texture.h"
 #include "Device.h"
@@ -463,3 +468,5 @@ Texture::CreateCubemap(Device& device,
 
   return S_OK;
 }
+
+

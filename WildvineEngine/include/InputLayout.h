@@ -1,3 +1,8 @@
+/**
+ * @file InputLayout.h
+ * @brief Declara la API de InputLayout dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -87,3 +92,5 @@ public:
    */
   ID3D11InputLayout* m_inputLayout = nullptr;
 };
+
+

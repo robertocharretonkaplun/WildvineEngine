@@ -1,3 +1,8 @@
+/**
+ * @file Device.h
+ * @brief Declara la API de Device dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -140,3 +145,4 @@ public:
 	 */
 	ID3D11Device* m_device = nullptr;
 };
+

@@ -1,3 +1,8 @@
+/**
+ * @file Camera.h
+ * @brief Declara la API de Camera dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "EngineUtilities\Vectors\Vector3.h"
@@ -171,3 +176,5 @@ private:
 
 	bool m_viewDirty = true; /**< Flag indicating whether the view matrix needs to be recalculated. */
 };
+
+

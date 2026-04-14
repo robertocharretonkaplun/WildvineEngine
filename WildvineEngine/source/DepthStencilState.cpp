@@ -1,3 +1,8 @@
+/**
+ * @file DepthStencilState.cpp
+ * @brief Implementa la logica de DepthStencilState dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "DepthStencilState.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -55,3 +60,5 @@ void
 DepthStencilState::destroy() {
 	SAFE_RELEASE(m_depthStencilState);
 }
+
+

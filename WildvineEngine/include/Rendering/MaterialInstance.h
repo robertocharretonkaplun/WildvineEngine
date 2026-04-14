@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file MaterialInstance.h
+ * @brief Declara la API de MaterialInstance dentro del subsistema Rendering.
+ * @ingroup rendering
+ */
+#pragma once
 #include "Prerequisites.h"
 #include "Rendering/RenderTypes.h"
 
@@ -6,6 +11,13 @@ class Material;
 class DeviceContext;
 class Texture;
 
+/**
+ * @class MaterialInstance
+ * @brief Agrupa un material base con sus texturas y parametros concretos.
+ *
+ * Esta clase permite reutilizar un mismo `Material` con diferentes mapas de texturas
+ * y parametros PBR por objeto renderizado.
+ */
 class
 MaterialInstance {
 public:
@@ -28,6 +40,9 @@ public:
 	MaterialParams& getParams() { return m_params; }
 	const MaterialParams& getParams() const { return m_params; }
 
+	/**
+	 * @brief Enlaza las texturas de la instancia en el contexto grafico actual.
+	 */
 	void bindTextures(DeviceContext& deviceContext) const;
 
 private:
@@ -40,3 +55,5 @@ private:
 	Texture* m_emissive = nullptr;
 	MaterialParams m_params;
 };
+
+

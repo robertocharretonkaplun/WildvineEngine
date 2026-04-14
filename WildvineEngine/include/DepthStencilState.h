@@ -1,3 +1,8 @@
+/**
+ * @file DepthStencilState.h
+ * @brief Declara la API de DepthStencilState dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -94,3 +99,4 @@ private:
    */
   ID3D11DepthStencilState* m_depthStencilState = nullptr;
 };
+

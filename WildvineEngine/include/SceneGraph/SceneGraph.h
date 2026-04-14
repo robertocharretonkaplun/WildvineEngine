@@ -1,4 +1,9 @@
-﻿#pragma once
+/**
+ * @file SceneGraph.h
+ * @brief Declara la API de SceneGraph dentro del subsistema SceneGraph.
+ * @ingroup scenegraph
+ */
+#pragma once
 #include "Prerequisites.h"
 
 class Entity;
@@ -6,6 +11,13 @@ class DeviceContext;
 class Camera;
 class RenderScene;
 
+/**
+ * @class SceneGraph
+ * @brief Administra la jerarquia de entidades y su actualizacion espacial.
+ *
+ * El `SceneGraph` registra entidades, resuelve relaciones padre-hijo y actualiza
+ * las matrices de mundo antes de generar la informacion necesaria para render.
+ */
 class 
 SceneGraph {
 public:
@@ -15,9 +27,17 @@ public:
 	void 
 	init();
 
+	/**
+	 * @brief Registra una entidad dentro del grafo.
+	 * @param e Entidad a registrar.
+	 */
 	void 
 	addEntity(Entity* e);  // registra en el grafo
 
+	/**
+	 * @brief Elimina una entidad del grafo si esta registrada.
+	 * @param e Entidad a retirar.
+	 */
 	void 
 	removeEntity(Entity* e);
 
@@ -54,5 +74,7 @@ private:
 private:
 	//std::vector<EU::TSharedPointer<Entity>> m_entities;
 public:
-	std::vector<Entity*> m_entities;
+	std::vector<Entity*> m_entities; ///< Entidades registradas en el grafo.
 };
+
+

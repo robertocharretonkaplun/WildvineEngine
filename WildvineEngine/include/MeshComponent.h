@@ -1,3 +1,8 @@
+/**
+ * @file MeshComponent.h
+ * @brief Declara la API de MeshComponent dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "ECS\Component.h"
@@ -99,3 +104,5 @@ public:
    */
   int m_numIndex;
 };
+
+

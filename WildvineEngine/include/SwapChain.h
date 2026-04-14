@@ -1,3 +1,8 @@
+/**
+ * @file SwapChain.h
+ * @brief Declara la API de SwapChain dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -143,3 +148,5 @@ private:
    */
   IDXGIFactory* m_dxgiFactory = nullptr;
 };
+
+

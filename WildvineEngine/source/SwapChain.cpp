@@ -1,3 +1,8 @@
+/**
+ * @file SwapChain.cpp
+ * @brief Implementa la logica de SwapChain dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "SwapChain.h"
 #include "Device.h"
 #include "DeviceContext.h"
@@ -209,3 +214,5 @@ HRESULT SwapChain::getBackBuffer(Texture& backBuffer)
 
   return S_OK;
 }
+
+

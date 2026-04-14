@@ -1,3 +1,8 @@
+/**
+ * @file ResourceManager.h
+ * @brief Declara la API de ResourceManager dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "IResource.h"
@@ -85,3 +90,4 @@ public:
 private:
 	std::unordered_map<std::string, std::shared_ptr<IResource>> m_resources;
 };
+

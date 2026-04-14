@@ -1,3 +1,8 @@
+/**
+ * @file Skybox.h
+ * @brief Declara la API de Skybox dentro del subsistema Utilities.
+ * @ingroup utilities
+ */
 #pragma once
 #include "Prerequisites.h"
 #include "ShaderProgram.h"
@@ -42,3 +47,4 @@ private:
 	EU::TSharedPointer<Actor> m_skybox;
 
 };
+

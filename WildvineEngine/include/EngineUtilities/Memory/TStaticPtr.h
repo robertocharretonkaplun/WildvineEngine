@@ -1,3 +1,8 @@
+/**
+ * @file TStaticPtr.h
+ * @brief Declara la API de TStaticPtr dentro del subsistema Memory.
+ * @ingroup memory
+ */
 /*
  * MIT License
  *
@@ -165,3 +170,5 @@ namespace EU {
   }
   */
 }
+
+

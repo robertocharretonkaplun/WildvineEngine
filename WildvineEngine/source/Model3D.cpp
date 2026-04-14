@@ -1,4 +1,9 @@
-﻿#include "Model3D.h"
+/**
+ * @file Model3D.cpp
+ * @brief Implementa la logica de Model3D dentro del subsistema Core.
+ * @ingroup core
+ */
+#include "Model3D.h"
 #include <chrono>
 #include <cstdint>
 #include <cmath>
@@ -812,3 +817,5 @@ Model3D::SaveBinaryCache(const std::string& cachePath) const {
 
 	return stream.good();
 }
+
+
