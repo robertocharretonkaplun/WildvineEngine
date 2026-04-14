@@ -436,10 +436,10 @@ BaseApp::init() {
 		return hr;
 	}
 
-	hr = m_forwardRenderer.init(m_device);
+	hr = m_renderPipeline.init(m_device, RendererType::Deferred);
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
-			("Failed to initialize ForwardRenderer. HRESULT: " + std::to_string(hr)).c_str());
+			("Failed to initialize RenderPipeline. HRESULT: " + std::to_string(hr)).c_str());
 		return hr;
 	}
 
@@ -467,7 +467,11 @@ BaseApp::update(float deltaTime) {
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
 	m_gui.drawViewportPanel(m_editorViewportPass.getSRV());
-	m_gui.drawRenderDebugPanel(m_forwardRenderer.getPreShadowSRV(), m_editorViewportPass.getSRV(), m_forwardRenderer.getShadowMapSRV());
+	m_gui.drawRenderDebugPanel(m_renderPipeline.getPreShadowSRV(), m_editorViewportPass.getSRV(), m_renderPipeline.getShadowMapSRV());
+	m_gui.drawGBufferDebugPanel(m_renderPipeline.getGBufferAlbedoMetallicSRV(),
+		m_renderPipeline.getGBufferNormalRoughnessSRV(),
+		m_renderPipeline.getGBufferWorldAoSRV(),
+		m_renderPipeline.getGBufferEmissiveAlphaSRV());
 	m_gui.outliner(m_actors);
 	EU::TSharedPointer<Actor> selectedActor;
 	if (m_gui.selectedActorIndex >= 0 &&
@@ -550,7 +554,7 @@ BaseApp::render() {
 	m_renderScene.clear();
 	m_sceneGraph.gatherRenderScene(m_renderScene, m_camera);
 	m_renderScene.skybox = &m_skybox;
-	m_forwardRenderer.render(
+	m_renderPipeline.render(
 		m_deviceContext,
 		m_camera,
 		m_renderScene,
@@ -573,7 +577,7 @@ BaseApp::destroy() {
 	if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
 	m_sceneGraph.destroy();
 	m_editorViewportPass.destroy();
-	m_forwardRenderer.destroy();
+	m_renderPipeline.destroy();
 	m_cyberGunRenderMesh.destroy();
 	m_drakefireRenderMesh.destroy();
 	m_AlbedoSRV.destroy();
@@ -727,7 +731,7 @@ void BaseApp::handleEditorViewportResize()
 
 	// Intercambio seguro: el pass viejo queda en newPass y se destruye al salir
 	m_editorViewportPass.swap(newPass);
-	m_forwardRenderer.resize(m_device, m_pendingViewportWidth, m_pendingViewportHeight);
+	m_renderPipeline.resize(m_device, m_pendingViewportWidth, m_pendingViewportHeight);
 
 	m_editorViewportResizePending = false;
 }

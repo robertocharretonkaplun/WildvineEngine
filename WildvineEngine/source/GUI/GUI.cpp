@@ -23,6 +23,12 @@ static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::LOCAL);
 namespace {
 const char* GetLightTypeLabel(LightType type);
 
+struct DebugTextureItem {
+	const char* label;
+	const char* channels;
+	ID3D11ShaderResourceView* srv;
+};
+
 ImU32 AccentU32(const ImVec4& color) {
 	return ImGui::ColorConvertFloat4ToU32(color);
 }
@@ -33,6 +39,29 @@ float RadToDeg(float radians) {
 
 float DegToRad(float degrees) {
 	return XMConvertToRadians(degrees);
+}
+
+void DrawDebugTextureEntry(const DebugTextureItem& item, int index, int& selectedView, float thumbnailHeight) {
+	ImGui::PushID(index);
+	if (ImGui::Selectable(item.label, selectedView == index, 0, ImVec2(0.0f, 20.0f))) {
+		selectedView = index;
+	}
+
+	if (item.channels != nullptr && item.channels[0] != '\0') {
+		ImGui::TextDisabled("%s", item.channels);
+	}
+
+	if (item.srv) {
+		const float thumbnailWidth = thumbnailHeight * 1.6f;
+		ImGui::Image((ImTextureID)item.srv, ImVec2(thumbnailWidth, thumbnailHeight));
+	}
+	else {
+		ImGui::Dummy(ImVec2(thumbnailHeight * 1.6f, thumbnailHeight));
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::TextDisabled("Unavailable");
+	}
+
+	ImGui::PopID();
 }
 
 void DrawInspectorPill(const char* text, const ImVec4& color) {
@@ -369,7 +398,7 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4* colors = style.Colors;
 
-	// GeometrÌa suave tipo macOS
+	// Geometr√≠a suave tipo macOS
 	style.WindowRounding = 14.0f;
 	style.ChildRounding = 14.0f;
 	style.PopupRounding = 14.0f;
@@ -388,13 +417,13 @@ GUI::appleLiquidStyle(float opacity, ImVec4 accent) {
 	style.ItemSpacing = ImVec2(8, 8);
 	style.ItemInnerSpacing = ImVec2(8, 6);
 
-	const float o = opacity;                 // opacidad del ìcristalî
+	const float o = opacity;                 // opacidad del ‚Äúcristal‚Äù
 	const ImVec4 txt = ImVec4(1, 1, 1, 0.95f);     // texto claro
-	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ìvidriosoî oscuro
+	const ImVec4 pane = ImVec4(0.16f, 0.16f, 0.18f, o); // panel ‚Äúvidrioso‚Äù oscuro
 	const ImVec4 paneHi = ImVec4(0.20f, 0.20f, 0.22f, o);
 	const ImVec4 paneLo = ImVec4(0.13f, 0.13f, 0.15f, o * 0.85f);
 
-	// Colores base ìglassî
+	// Colores base ‚Äúglass‚Äù
 	colors[ImGuiCol_Text] = txt;
 	colors[ImGuiCol_TextDisabled] = ImVec4(1, 1, 1, 0.45f);
 	colors[ImGuiCol_WindowBg] = pane;     // importante: con alpha
@@ -463,16 +492,16 @@ GUI::ToolBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("New")) {
-				// AcciÛn para "New"
+				// Acci√≥n para "New"
 			}
 			if (ImGui::MenuItem("Open")) {
-				// AcciÛn para "Open"
+				// Acci√≥n para "Open"
 			}
 			if (ImGui::MenuItem("Save")) {
-				// AcciÛn para "Save"
+				// Acci√≥n para "Save"
 			}
 			if (ImGui::MenuItem("Exit")) {
-				// AcciÛn para "Exit"
+				// Acci√≥n para "Exit"
 				show_exit_popup = true;
 				ImGui::OpenPopup("Exit?");
 				//closeApp();
@@ -481,28 +510,28 @@ GUI::ToolBar() {
 		}
 		if (ImGui::BeginMenu("Edit")) {
 			if (ImGui::MenuItem("Undo")) {
-				// AcciÛn para "Undo"
+				// Acci√≥n para "Undo"
 			}
 			if (ImGui::MenuItem("Redo")) {
-				// AcciÛn para "Redo"
+				// Acci√≥n para "Redo"
 			}
 			if (ImGui::MenuItem("Cut")) {
-				// AcciÛn para "Cut"
+				// Acci√≥n para "Cut"
 			}
 			if (ImGui::MenuItem("Copy")) {
-				// AcciÛn para "Copy"
+				// Acci√≥n para "Copy"
 			}
 			if (ImGui::MenuItem("Paste")) {
-				// AcciÛn para "Paste"
+				// Acci√≥n para "Paste"
 			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools")) {
 			if (ImGui::MenuItem("Options")) {
-				// AcciÛn para "Options"
+				// Acci√≥n para "Options"
 			}
 			if (ImGui::MenuItem("Settings")) {
-				// AcciÛn para "Settings"
+				// Acci√≥n para "Settings"
 			}
 			ImGui::EndMenu();
 		}
@@ -525,7 +554,7 @@ GUI::closeApp() {
 		ImGui::Separator();
 
 		if (ImGui::Button("OK", ImVec2(120, 0))) {
-			exit(0); // Salir de la aplicaciÛn
+			exit(0); // Salir de la aplicaci√≥n
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -1260,15 +1289,10 @@ void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
 {
 	ImGui::Begin("Render Debug");
 
-	struct DebugViewItem {
-		const char* label;
-		ID3D11ShaderResourceView* srv;
-	};
-
-	DebugViewItem items[] = {
-		{ "Pre-Shadow", preShadowSRV },
-		{ "Scene Final", finalViewportSRV },
-		{ "Shadow Map", shadowMapSRV }
+	DebugTextureItem items[] = {
+		{ "Pre-Shadow", "", preShadowSRV },
+		{ "Scene Final", "", finalViewportSRV },
+		{ "Shadow Map", "", shadowMapSRV }
 	};
 
 	static int selectedView = 0;
@@ -1278,25 +1302,11 @@ void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
 	ImGui::Separator();
 
 	for (int i = 0; i < IM_ARRAYSIZE(items); ++i) {
-		ImGui::PushID(i);
-		if (ImGui::Selectable(items[i].label, selectedView == i, 0, ImVec2(0.0f, 20.0f))) {
-			selectedView = i;
-		}
-
-		if (items[i].srv) {
-			const float thumbnailWidth = thumbnailHeight * 1.6f;
-			ImGui::Image((ImTextureID)items[i].srv, ImVec2(thumbnailWidth, thumbnailHeight));
-		}
-		else {
-			ImGui::Dummy(ImVec2(thumbnailHeight * 1.6f, thumbnailHeight));
-			ImGui::SameLine(0.0f, 0.0f);
-			ImGui::TextDisabled("Unavailable");
-		}
+		DrawDebugTextureEntry(items[i], i, selectedView, thumbnailHeight);
 
 		if (i + 1 < IM_ARRAYSIZE(items)) {
 			ImGui::Separator();
 		}
-		ImGui::PopID();
 	}
 
 	ImGui::Separator();
@@ -1310,6 +1320,67 @@ void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
 		ImGui::Dummy(available);
 		ImGui::SameLine(0.0f, 0.0f);
 		ImGui::TextDisabled("No texture bound for this view");
+	}
+
+	ImGui::End();
+}
+
+void GUI::drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
+	ID3D11ShaderResourceView* normalRoughnessSRV,
+	ID3D11ShaderResourceView* worldAoSRV,
+	ID3D11ShaderResourceView* emissiveAlphaSRV)
+{
+	DebugTextureItem items[] = {
+		{ "Albedo + Metallic", "RGB: Albedo | A: Metallic", albedoMetallicSRV },
+		{ "Normal + Roughness", "RGB: Normal (packed) | A: Roughness", normalRoughnessSRV },
+		{ "World + AO", "RGB: World Position | A: Ambient Occlusion", worldAoSRV },
+		{ "Emissive + Alpha", "RGB: Emissive | A: Alpha", emissiveAlphaSRV }
+	};
+
+	bool hasAnyTexture = false;
+	for (int i = 0; i < IM_ARRAYSIZE(items); ++i) {
+		if (items[i].srv != nullptr) {
+			hasAnyTexture = true;
+			break;
+		}
+	}
+
+	if (!hasAnyTexture) {
+		return;
+	}
+
+	ImGui::Begin("GBuffer Debug");
+
+	static int selectedView = 0;
+	if (selectedView >= IM_ARRAYSIZE(items)) {
+		selectedView = 0;
+	}
+
+	const float thumbnailHeight = 96.0f;
+
+	ImGui::TextDisabled("Deferred attachments");
+	ImGui::Separator();
+
+	for (int i = 0; i < IM_ARRAYSIZE(items); ++i) {
+		DrawDebugTextureEntry(items[i], i, selectedView, thumbnailHeight);
+
+		if (i + 1 < IM_ARRAYSIZE(items)) {
+			ImGui::Separator();
+		}
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Focused Attachment: %s", items[selectedView].label);
+	ImGui::TextDisabled("%s", items[selectedView].channels);
+
+	ImVec2 available = ImGui::GetContentRegionAvail();
+	if (items[selectedView].srv && available.x > 16.0f && available.y > 16.0f) {
+		ImGui::Image((ImTextureID)items[selectedView].srv, available);
+	}
+	else {
+		ImGui::Dummy(available);
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::TextDisabled("No texture bound for this attachment");
 	}
 
 	ImGui::End();

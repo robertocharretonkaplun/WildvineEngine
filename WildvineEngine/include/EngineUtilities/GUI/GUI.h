@@ -109,6 +109,11 @@ public:
                             ID3D11ShaderResourceView* finalViewportSRV,
                             ID3D11ShaderResourceView* shadowMapSRV);
 
+  void drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
+                             ID3D11ShaderResourceView* normalRoughnessSRV,
+                             ID3D11ShaderResourceView* worldAoSRV,
+                             ID3D11ShaderResourceView* emissiveAlphaSRV);
+
   void drawEditorDockspace();
 
   /**

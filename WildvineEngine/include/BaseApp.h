@@ -30,7 +30,7 @@
 #include "Rendering/Material.h"
 #include "Rendering/MaterialInstance.h"
 #include "Rendering/Mesh.h"
-#include "Rendering/ForwardRenderer.h"
+#include "Rendering/RenderPipeline.h"
 #include "Rendering/RenderScene.h"
 #include <string>
 extern IMGUI_IMPL_API
@@ -189,7 +189,7 @@ private:
 	MaterialInstance m_drakefireMaterial;
 
 	EditorViewportPass m_editorViewportPass;
-	ForwardRenderer m_forwardRenderer;
+	RenderPipeline m_renderPipeline;
 	RenderScene m_renderScene;
 	bool m_editorViewportResizePending = false;
 	unsigned int m_pendingViewportWidth = 1;
