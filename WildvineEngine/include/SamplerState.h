@@ -1,3 +1,8 @@
+/**
+ * @file SamplerState.h
+ * @brief Declara la API de SamplerState dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -88,3 +93,5 @@ public:
    */
   ID3D11SamplerState* m_sampler = nullptr;
 };
+
+

@@ -1,3 +1,8 @@
+/**
+ * @file DeviceContext.cpp
+ * @brief Implementa la logica de DeviceContext dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "DeviceContext.h"
 
 void 
@@ -252,3 +257,5 @@ DeviceContext::DrawIndexed(unsigned int IndexCount,
 	// Ejecutar el dibujo
 	m_deviceContext->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
 }
+
+

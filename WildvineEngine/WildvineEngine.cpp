@@ -1,3 +1,8 @@
+/**
+ * @file WildvineEngine.cpp
+ * @brief Define el punto de entrada nativo de Wildvine Engine.
+ * @ingroup core
+ */
 #include "BaseApp.h"
 
 //--------------------------------------------------------------------------------------
@@ -9,3 +14,5 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCm
 	BaseApp app;
 	return app.run(hInstance, nCmdShow);
 }
+
+

@@ -1,3 +1,8 @@
+/**
+ * @file RenderTargetView.cpp
+ * @brief Implementa la logica de RenderTargetView dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "RenderTargetView.h"
 #include "Device.h"
 #include "Texture.h"
@@ -118,3 +123,5 @@ RenderTargetView::render(DeviceContext& deviceContext, unsigned int numViews) {
 void RenderTargetView::destroy() {
 	SAFE_RELEASE(m_renderTargetView);
 }
+
+

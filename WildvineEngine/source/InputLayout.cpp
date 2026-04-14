@@ -1,33 +1,40 @@
+/**
+ * @file InputLayout.cpp
+ * @brief Implementa la logica de InputLayout dentro del subsistema Core.
+ * @ingroup core
+ */
 #include "InputLayout.h"
 #include "Device.h"
 #include "DeviceContext.h"
 
-HRESULT 
-InputLayout::init(Device& device, 
-									std::vector<D3D11_INPUT_ELEMENT_DESC>& Layout, 
-									ID3DBlob* VertexShaderData) {
-	if (Layout.empty()) {
-		ERROR("InputLayout", "init", "Layout vector is empty.");
-		return E_INVALIDARG;
-	}
-	if (!VertexShaderData) {
-		ERROR("InputLayout", "init", "VertexShaderData is nullptr.");
-		return E_POINTER;
-	}
+HRESULT
+InputLayout::init(Device& device,
+                  const D3D11_INPUT_ELEMENT_DESC* layoutDesc,
+                  UINT layoutCount,
+                  ID3DBlob* vertexShaderData)
+{
+  if (!layoutDesc || layoutCount == 0) {
+    ERROR("InputLayout", "init", "Layout descriptor is empty.");
+    return E_INVALIDARG;
+  }
 
-	HRESULT hr = device.CreateInputLayout(Layout.data(),
-																				static_cast<unsigned int>(Layout.size()),
-																				VertexShaderData->GetBufferPointer(),
-																				VertexShaderData->GetBufferSize(),
-																				&m_inputLayout);
+  if (!vertexShaderData) {
+    ERROR("InputLayout", "init", "VertexShaderData is nullptr.");
+    return E_POINTER;
+  }
 
-	if (FAILED(hr)) {
-		ERROR("InputLayout", "init",
-			("Failed to create InputLayout. HRESULT: " + std::to_string(hr)).c_str());
-		return hr;
-	}
+  HRESULT hr = device.CreateInputLayout(layoutDesc, layoutCount,
+                                        vertexShaderData->GetBufferPointer(),
+                                        vertexShaderData->GetBufferSize(),
+                                        &m_inputLayout );
 
-	return S_OK;
+  if (FAILED(hr)) {
+    ERROR("InputLayout", "init",
+      ("Failed to create InputLayout. HRESULT: " + std::to_string(hr)).c_str());
+    return hr;
+  }
+
+  return S_OK;
 }
 
 void
@@ -49,3 +56,5 @@ void
 InputLayout::destroy() {
 	SAFE_RELEASE(m_inputLayout);
 }
+
+

@@ -1,3 +1,8 @@
+/**
+ * @file SwapChain.h
+ * @brief Declara la API de SwapChain dentro del subsistema Core.
+ * @ingroup core
+ */
 #pragma once
 #include "Prerequisites.h"
 
@@ -93,6 +98,12 @@ public:
   void 
   present();
 
+  HRESULT 
+  resizeBuffers(unsigned int width, unsigned int height);
+  
+  HRESULT 
+  getBackBuffer(Texture& backBuffer);
+
 public:
   /**
    * @brief Objeto principal del Swap Chain en Direct3D 11.
@@ -137,3 +148,5 @@ private:
    */
   IDXGIFactory* m_dxgiFactory = nullptr;
 };
+
+
