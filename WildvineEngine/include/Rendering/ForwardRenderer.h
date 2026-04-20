@@ -81,6 +81,7 @@ private:
 	Buffer m_perObjectBuffer;
 	Buffer m_perMaterialBuffer;
 	DepthStencilState m_transparentDepthStencil;
+	DepthStencilState m_shadowDepthStencil;
 	ID3D11BlendState* m_alphaBlendState = nullptr;
 	ID3D11BlendState* m_opaqueBlendState = nullptr;
 	ID3D11BlendState* m_additiveBlendState = nullptr;

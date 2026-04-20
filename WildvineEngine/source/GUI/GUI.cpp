@@ -1359,6 +1359,7 @@ void GUI::drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
 	const float thumbnailHeight = 96.0f;
 
 	ImGui::TextDisabled("Deferred attachments");
+	ImGui::Checkbox("Visualize Shadow Factor", &m_visualizeDeferredShadowFactor);
 	ImGui::Separator();
 
 	for (int i = 0; i < IM_ARRAYSIZE(items); ++i) {

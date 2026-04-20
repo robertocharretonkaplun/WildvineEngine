@@ -42,6 +42,14 @@ ForwardRenderer::init(Device& device) {
 		return hr;
 	}
 
+	hr = m_shadowDepthStencil.init(device,
+		true,
+		D3D11_DEPTH_WRITE_MASK_ALL,
+		D3D11_COMPARISON_LESS);
+	if (FAILED(hr)) {
+		return hr;
+	}
+
 	hr = createShadowResources(device);
 	if (FAILED(hr)) {
 		return hr;
@@ -114,6 +122,7 @@ ForwardRenderer::destroy() {
 	SAFE_RELEASE(m_additiveBlendState);
 	SAFE_RELEASE(m_premultipliedBlendState);
 	m_transparentDepthStencil.destroy();
+	m_shadowDepthStencil.destroy();
 	m_perMaterialBuffer.destroy();
 	m_perObjectBuffer.destroy();
 	m_perFrameBuffer.destroy();
@@ -174,6 +183,7 @@ ForwardRenderer::renderShadowPass(DeviceContext& deviceContext) {
 	deviceContext.RSSetViewports(1, &shadowViewport);
 
 	m_shadowRasterizer.render(deviceContext);
+	m_shadowDepthStencil.render(deviceContext, 0, false);
 	m_perFrameBuffer.render(deviceContext, 0, 1, false);
 
 	for (const RenderObject* object : m_opaqueQueue) {

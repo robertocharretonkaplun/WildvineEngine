@@ -66,6 +66,11 @@ DeferredRenderer::init(Device& device) {
 		return hr;
 	}
 
+	hr = m_lightingDebugBuffer.init(device, sizeof(DeferredLightingDebugData));
+	if (FAILED(hr)) {
+		return hr;
+	}
+
 	hr = m_transparentDepthStencil.init(device,
 		true,
 		D3D11_DEPTH_WRITE_MASK_ZERO,
@@ -78,6 +83,14 @@ DeferredRenderer::init(Device& device) {
 		false,
 		D3D11_DEPTH_WRITE_MASK_ZERO,
 		D3D11_COMPARISON_ALWAYS);
+	if (FAILED(hr)) {
+		return hr;
+	}
+
+	hr = m_shadowDepthStencil.init(device,
+		true,
+		D3D11_DEPTH_WRITE_MASK_ALL,
+		D3D11_COMPARISON_LESS);
 	if (FAILED(hr)) {
 		return hr;
 	}
@@ -172,7 +185,9 @@ DeferredRenderer::destroy() {
 
 	m_transparentDepthStencil.destroy();
 	m_disabledDepthStencil.destroy();
+	m_shadowDepthStencil.destroy();
 	m_perMaterialBuffer.destroy();
+	m_lightingDebugBuffer.destroy();
 	m_perObjectBuffer.destroy();
 	m_perFrameBuffer.destroy();
 
@@ -389,20 +404,30 @@ void
 DeferredRenderer::renderLightingPass(DeviceContext& deviceContext) {
 	clearDeferredSRVs(deviceContext);
 
-	ID3D11ShaderResourceView* resources[5] = {
+	ID3D11ShaderResourceView* gBufferResources[4] = {
 		m_gBufferAlbedoMetallicSRV.m_textureFromImg,
 		m_gBufferNormalRoughnessSRV.m_textureFromImg,
 		m_gBufferWorldAoSRV.m_textureFromImg,
-		m_gBufferEmissiveAlphaSRV.m_textureFromImg,
-		m_applyShadows ? m_shadowDepthSRV.m_textureFromImg : nullptr
+		m_gBufferEmissiveAlphaSRV.m_textureFromImg
 	};
 
-	deviceContext.PSSetShaderResources(0, 5, resources);
+	deviceContext.PSSetShaderResources(0, 4, gBufferResources);
+	if (m_applyShadows && m_shadowDepthSRV.m_textureFromImg) {
+		deviceContext.PSSetShaderResources(6, 1, &m_shadowDepthSRV.m_textureFromImg);
+	}
+	else {
+		ID3D11ShaderResourceView* nullShadowSRV[1] = { nullptr };
+		deviceContext.PSSetShaderResources(6, 1, nullShadowSRV);
+	}
 	m_disabledDepthStencil.render(deviceContext, 0, false);
 	m_fullscreenRasterizer.render(deviceContext);
 	m_lightingSampler.render(deviceContext, 0, 1);
 	m_deferredLightingShader.render(deviceContext);
 	m_perFrameBuffer.render(deviceContext, 0, 1, true);
+	m_lightingDebugData.DebugViewMode = m_shadowFactorDebugEnabled ? 1 : 0;
+	m_lightingDebugData.ShadowStrength = 1.0f;
+	m_lightingDebugBuffer.update(deviceContext, nullptr, 0, nullptr, &m_lightingDebugData, 0, 0);
+	m_lightingDebugBuffer.render(deviceContext, 1, 1, true);
 
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_fullscreenVertexBuffer.render(deviceContext, 0, 1);
@@ -535,6 +560,7 @@ DeferredRenderer::renderShadowPass(DeviceContext& deviceContext) {
 	deviceContext.RSSetViewports(1, &shadowViewport);
 
 	m_shadowRasterizer.render(deviceContext);
+	m_shadowDepthStencil.render(deviceContext, 0, false);
 	m_perFrameBuffer.render(deviceContext, 0, 1, false);
 
 	for (const RenderObject* object : m_opaqueQueue) {
@@ -644,7 +670,7 @@ DeferredRenderer::createGBufferResources(Device& device, unsigned int width, uns
 	hr = createGBufferTarget(device,
 		width,
 		height,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R32G32B32A32_FLOAT,
 		m_gBufferWorldAoTexture,
 		m_gBufferWorldAoSRV,
 		m_gBufferWorldAoRTV);

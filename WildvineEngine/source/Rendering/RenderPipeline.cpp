@@ -105,6 +105,14 @@ RenderPipeline::getGBufferEmissiveAlphaSRV() const {
 	return renderer ? renderer->getGBufferEmissiveAlphaSRV() : nullptr;
 }
 
+void
+RenderPipeline::setShadowFactorDebugEnabled(bool enabled) {
+	ISceneRenderer* renderer = resolveRenderer(RendererType::Deferred);
+	if (renderer) {
+		renderer->setShadowFactorDebugEnabled(enabled);
+	}
+}
+
 HRESULT
 RenderPipeline::ensureRendererInitialized(RendererType rendererType, Device& device) {
 	switch (rendererType) {

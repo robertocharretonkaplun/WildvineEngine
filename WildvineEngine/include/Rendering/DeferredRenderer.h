@@ -46,6 +46,7 @@ public:
 	ID3D11ShaderResourceView* getGBufferNormalRoughnessSRV() const override { return m_gBufferNormalRoughnessSRV.m_textureFromImg; }
 	ID3D11ShaderResourceView* getGBufferWorldAoSRV() const override { return m_gBufferWorldAoSRV.m_textureFromImg; }
 	ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const override { return m_gBufferEmissiveAlphaSRV.m_textureFromImg; }
+	void setShadowFactorDebugEnabled(bool enabled) override { m_shadowFactorDebugEnabled = enabled; }
 	const char* getDebugName() const override { return "DeferredRenderer"; }
 
 private:
@@ -82,11 +83,13 @@ private:
 	Buffer m_perFrameBuffer;
 	Buffer m_perObjectBuffer;
 	Buffer m_perMaterialBuffer;
+	Buffer m_lightingDebugBuffer;
 	Buffer m_fullscreenVertexBuffer;
 	Buffer m_fullscreenIndexBuffer;
 
 	DepthStencilState m_transparentDepthStencil;
 	DepthStencilState m_disabledDepthStencil;
+	DepthStencilState m_shadowDepthStencil;
 
 	ID3D11BlendState* m_alphaBlendState = nullptr;
 	ID3D11BlendState* m_opaqueBlendState = nullptr;
@@ -130,6 +133,13 @@ private:
 	CBPerFrame m_cbPerFrame{};
 	CBPerObject m_cbPerObject{};
 	CBPerMaterial m_cbPerMaterial{};
+	struct DeferredLightingDebugData {
+		int DebugViewMode = 0;
+		float ShadowStrength = 1.0f;
+		float pad0 = 0.0f;
+		float pad1 = 0.0f;
+	} m_lightingDebugData{};
+	bool m_shadowFactorDebugEnabled = false;
 
 	std::vector<const RenderObject*> m_opaqueQueue;
 	std::vector<const RenderObject*> m_transparentQueue;

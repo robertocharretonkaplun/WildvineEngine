@@ -472,6 +472,7 @@ BaseApp::update(float deltaTime) {
 		m_renderPipeline.getGBufferNormalRoughnessSRV(),
 		m_renderPipeline.getGBufferWorldAoSRV(),
 		m_renderPipeline.getGBufferEmissiveAlphaSRV());
+	m_renderPipeline.setShadowFactorDebugEnabled(m_gui.m_visualizeDeferredShadowFactor);
 	m_gui.outliner(m_actors);
 	EU::TSharedPointer<Actor> selectedActor;
 	if (m_gui.selectedActorIndex >= 0 &&
