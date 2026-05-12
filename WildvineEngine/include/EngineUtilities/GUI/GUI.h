@@ -138,6 +138,9 @@ private:
   bool m_requestSaveScene = false;
   ImDrawList* m_viewportDrawList = nullptr;
   bool m_viewportActive = false;
+  ID3D11ShaderResourceView* m_renderDebugPreShadowSRV = nullptr;
+  ID3D11ShaderResourceView* m_renderDebugFinalSRV = nullptr;
+  ID3D11ShaderResourceView* m_renderDebugShadowMapSRV = nullptr;
 
 public:
   bool m_isUsingGizmo = false;               ///< Indica si el gizmo esta capturando entrada del usuario.
