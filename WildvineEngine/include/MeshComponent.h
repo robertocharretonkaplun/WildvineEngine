@@ -82,6 +82,14 @@ public:
    * @brief Nombre de la malla.
    */
   std::string m_name;
+  /**
+   * @brief Transform local de la malla dentro del modelo importado.
+   */
+  XMFLOAT4X4 m_localTransform = XMFLOAT4X4(
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f);
 
   /**
    * @brief Lista de vértices de la malla.

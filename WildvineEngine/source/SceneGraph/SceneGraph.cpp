@@ -13,6 +13,7 @@
 #include "EngineUtilities/Utilities/Camera.h"
 #include "Rendering/Material.h"
 #include "Rendering/MaterialInstance.h"
+#include "Rendering/Mesh.h"
 #include "Rendering/RenderScene.h"
 
 void SceneGraph::init() {
@@ -254,17 +255,40 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 		float dz = objectPos.z - cameraPos.z;
 		renderObject.distanceToCamera = dx * dx + dy * dy + dz * dz;
 
-		MaterialDomain domain = MaterialDomain::Opaque;
-		if (renderObject.materialInstance &&
-			renderObject.materialInstance->getMaterial()) {
-			domain = renderObject.materialInstance->getMaterial()->getDomain();
-		}
+		bool hasOpaqueSubmesh = false;
+		bool hasTransparentSubmesh = false;
+		if (renderObject.mesh && !renderObject.materialInstances.empty()) {
+			const std::vector<Submesh>& submeshes = renderObject.mesh->getSubmeshes();
+			for (const Submesh& submesh : submeshes) {
+				MaterialInstance* materialInstance = renderObject.materialInstance;
+				if (submesh.materialSlot < renderObject.materialInstances.size() &&
+					renderObject.materialInstances[submesh.materialSlot]) {
+					materialInstance = renderObject.materialInstances[submesh.materialSlot];
+				}
 
-		renderObject.transparent = (domain == MaterialDomain::Transparent);
-		if (renderObject.transparent) {
-			outScene.transparentObjects.push_back(renderObject);
+				Material* material = materialInstance ? materialInstance->getMaterial() : nullptr;
+				const MaterialDomain domain = material ? material->getDomain() : MaterialDomain::Opaque;
+				if (domain == MaterialDomain::Transparent) {
+					hasTransparentSubmesh = true;
+				}
+				else {
+					hasOpaqueSubmesh = true;
+				}
+			}
 		}
 		else {
+			Material* material = renderObject.materialInstance ? renderObject.materialInstance->getMaterial() : nullptr;
+			const MaterialDomain domain = material ? material->getDomain() : MaterialDomain::Opaque;
+			hasTransparentSubmesh = (domain == MaterialDomain::Transparent);
+			hasOpaqueSubmesh = !hasTransparentSubmesh;
+		}
+
+		if (hasTransparentSubmesh) {
+			renderObject.transparent = true;
+			outScene.transparentObjects.push_back(renderObject);
+		}
+		if (hasOpaqueSubmesh) {
+			renderObject.transparent = false;
 			outScene.opaqueObjects.push_back(renderObject);
 		}
 	}

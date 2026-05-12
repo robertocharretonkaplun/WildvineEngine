@@ -157,6 +157,17 @@ private:
 	Texture m_drakefireMetallicSRV;
 	Texture m_drakefireRoughnessSRV;
 	Texture m_drakefireAOSRV;
+	Texture m_toadAlbedoSRV;
+	Texture m_toadNormalSRV;
+	Texture m_toadMetallicSRV;
+	Texture m_toadRoughnessSRV;
+	Texture m_toadAOSRV;
+	Texture m_toadGlassAlbedoSRV;
+	Texture m_toadGlassNormalSRV;
+	Texture m_toadGlassRoughnessSRV;
+	Texture m_toadHeadAlbedoSRV;
+	Texture m_toadHeadNormalSRV;
+	Texture m_toadHeadRoughnessSRV;
 
 	Camera															m_camera;
 
@@ -164,11 +175,13 @@ private:
 	std::vector<EU::TSharedPointer<Actor>> m_actors;
 	EU::TSharedPointer<Actor> m_cyberGun;
 	EU::TSharedPointer<Actor> m_drakefirePistol;
+	EU::TSharedPointer<Actor> m_sciFiToad;
 	EU::TSharedPointer<Actor> m_directionalLightActor;
 
 	
-	Model3D*														m_model;
+	Model3D*														m_model = nullptr;
 	Model3D*														m_drakefireModel = nullptr;
+	Model3D*														m_toadModel = nullptr;
 
 	//CBChangeOnResize										cbChangesOnResize;
 	//CBNeverChanges											cbNeverChanges;
@@ -183,10 +196,19 @@ private:
 	SamplerState m_defaultSampler;
 	Mesh m_cyberGunRenderMesh;
 	Mesh m_drakefireRenderMesh;
+	Mesh m_toadRenderMesh;
 	Material m_pbrMaterial;
 	Material m_transparentPbrMaterial;
+	Material m_cyberGunPbrMaterial;
+	Material m_drakefirePbrMaterial;
+	Material m_toadPbrMaterial;
+	Material m_toadGlassPbrMaterial;
+	Material m_toadHeadPbrMaterial;
 	MaterialInstance m_cyberGunMaterial;
 	MaterialInstance m_drakefireMaterial;
+	MaterialInstance m_toadMaterial;
+	MaterialInstance m_toadGlassMaterial;
+	MaterialInstance m_toadHeadMaterial;
 
 	EditorViewportPass m_editorViewportPass;
 	RenderPipeline m_renderPipeline;

@@ -140,6 +140,7 @@ BaseApp::init() {
 	// Set CyberGun Actor
 	m_cyberGun = EU::MakeShared<Actor>(m_device);
 	m_drakefirePistol = EU::MakeShared<Actor>(m_device);
+	m_sciFiToad = EU::MakeShared<Actor>(m_device);
 
 	if (!m_cyberGun.isNull()) {
 		m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
@@ -243,6 +244,91 @@ BaseApp::init() {
 		return E_FAIL;
 	}
 
+	if (!m_sciFiToad.isNull()) {
+		m_toadModel = new Model3D("Models/Bake_Sci-fiToad.fbx", ModelType::FBX);
+		if (!m_toadModel || !m_toadModel->load("Models/Bake_Sci-fiToad.fbx")) {
+			ERROR("Main", "InitDevice", "Failed to load Sci-Fi Toad model.");
+			return E_FAIL;
+		}
+
+		hr = m_toadAlbedoSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Body_BC", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad albedo texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadNormalSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Body_N", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad normal texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadMetallicSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Body_M", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad metallic texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadRoughnessSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Body_R", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad roughness texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadAOSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Body_AO", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad AO texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadGlassAlbedoSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Glass_BC", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad glass albedo texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadGlassNormalSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Glass_N", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad glass normal texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadGlassRoughnessSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Glass_R", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad glass roughness texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadHeadAlbedoSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Head_BC", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad head albedo texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadHeadNormalSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Head_N", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad head normal texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+		hr = m_toadHeadRoughnessSRV.init(m_device, "Textures/Sci-FIToad/Sci-FIToad_Head_R", PNG);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad head roughness texture. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		m_sciFiToad->setName("Sci-Fi Toad");
+		m_actors.push_back(m_sciFiToad);
+		m_sciFiToad->getComponent<Transform>()->setTransform(EU::Vector3(0.0f, -1.90f, 10.5f),
+			EU::Vector3(0.0f, 3.14f, 0.0f),
+			EU::Vector3(1.0f, 1.0f, 1.0f));
+	}
+	else {
+		ERROR("Main", "InitDevice", "Failed to create Sci-Fi Toad Actor.");
+		return E_FAIL;
+	}
+
 	// Store the Actors in the Scene Graph
 	for (auto& actor : m_actors) {
 		m_sceneGraph.addEntity(actor.get());
@@ -315,7 +401,24 @@ BaseApp::init() {
 	m_transparentPbrMaterial.setDomain(MaterialDomain::Transparent);
 	m_transparentPbrMaterial.setBlendMode(BlendMode::Alpha);
 
-	m_cyberGunMaterial.setMaterial(&m_pbrMaterial);
+	auto configurePbrMaterial = [&](Material& material) {
+		material.setShader(&m_shaderProgram);
+		material.setRasterizerState(&m_defaultRasterizer);
+		material.setDepthStencilState(&m_defaultDepthStencil);
+		material.setSamplerState(&m_defaultSampler);
+		material.setDomain(MaterialDomain::Opaque);
+		material.setBlendMode(BlendMode::Opaque);
+	};
+
+	configurePbrMaterial(m_cyberGunPbrMaterial);
+	configurePbrMaterial(m_drakefirePbrMaterial);
+	configurePbrMaterial(m_toadPbrMaterial);
+	configurePbrMaterial(m_toadGlassPbrMaterial);
+	configurePbrMaterial(m_toadHeadPbrMaterial);
+	m_toadGlassPbrMaterial.setDomain(MaterialDomain::Transparent);
+	m_toadGlassPbrMaterial.setBlendMode(BlendMode::Alpha);
+
+	m_cyberGunMaterial.setMaterial(&m_cyberGunPbrMaterial);
 	m_cyberGunMaterial.setAlbedo(&m_AlbedoSRV);
 	m_cyberGunMaterial.setNormal(&m_NormalSRV);
 	m_cyberGunMaterial.setMetallic(&m_MetallicSRV);
@@ -332,7 +435,7 @@ BaseApp::init() {
 	m_cyberGunMaterial.getParams().emissiveStrength = 1.0f;
 	m_cyberGunMaterial.getParams().alphaCutoff = 0.5f;
 
-	m_drakefireMaterial.setMaterial(&m_pbrMaterial);
+	m_drakefireMaterial.setMaterial(&m_drakefirePbrMaterial);
 	m_drakefireMaterial.setAlbedo(&m_drakefireAlbedoSRV);
 	m_drakefireMaterial.setNormal(&m_drakefireNormalSRV);
 	m_drakefireMaterial.setMetallic(&m_drakefireMetallicSRV);
@@ -344,6 +447,41 @@ BaseApp::init() {
 	m_drakefireMaterial.getParams().ao = 1.0f;
 	m_drakefireMaterial.getParams().normalScale = 1.0f;
 	m_drakefireMaterial.getParams().alphaCutoff = 0.5f;
+
+	m_toadMaterial.setMaterial(&m_toadPbrMaterial);
+	m_toadMaterial.setAlbedo(&m_toadAlbedoSRV);
+	m_toadMaterial.setNormal(&m_toadNormalSRV);
+	m_toadMaterial.setMetallic(&m_toadMetallicSRV);
+	m_toadMaterial.setRoughness(&m_toadRoughnessSRV);
+	m_toadMaterial.setAO(&m_toadAOSRV);
+	m_toadMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_toadMaterial.getParams().metallic = 1.0f;
+	m_toadMaterial.getParams().roughness = 1.0f;
+	m_toadMaterial.getParams().ao = 1.0f;
+	m_toadMaterial.getParams().normalScale = 1.0f;
+	m_toadMaterial.getParams().alphaCutoff = 0.5f;
+
+	m_toadGlassMaterial.setMaterial(&m_toadGlassPbrMaterial);
+	m_toadGlassMaterial.setAlbedo(&m_toadGlassAlbedoSRV);
+	m_toadGlassMaterial.setNormal(&m_toadGlassNormalSRV);
+	m_toadGlassMaterial.setRoughness(&m_toadGlassRoughnessSRV);
+	m_toadGlassMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.35f);
+	m_toadGlassMaterial.getParams().metallic = 0.0f;
+	m_toadGlassMaterial.getParams().roughness = 0.25f;
+	m_toadGlassMaterial.getParams().ao = 1.0f;
+	m_toadGlassMaterial.getParams().normalScale = 1.0f;
+	m_toadGlassMaterial.getParams().alphaCutoff = 0.5f;
+
+	m_toadHeadMaterial.setMaterial(&m_toadHeadPbrMaterial);
+	m_toadHeadMaterial.setAlbedo(&m_toadHeadAlbedoSRV);
+	m_toadHeadMaterial.setNormal(&m_toadHeadNormalSRV);
+	m_toadHeadMaterial.setRoughness(&m_toadHeadRoughnessSRV);
+	m_toadHeadMaterial.getParams().baseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_toadHeadMaterial.getParams().metallic = 0.0f;
+	m_toadHeadMaterial.getParams().roughness = 1.0f;
+	m_toadHeadMaterial.getParams().ao = 1.0f;
+	m_toadHeadMaterial.getParams().normalScale = 1.0f;
+	m_toadHeadMaterial.getParams().alphaCutoff = 0.5f;
 
 	m_cyberGunRenderMesh.destroy();
 	for (const MeshComponent& meshComponent : m_model->GetMeshes()) {
@@ -363,6 +501,7 @@ BaseApp::init() {
 		}
 
 		submesh.indexCount = meshComponent.m_numIndex;
+		submesh.localTransform = meshComponent.m_localTransform;
 		submesh.materialSlot = 0;
 		m_cyberGunRenderMesh.getSubmeshes().push_back(std::move(submesh));
 	}
@@ -385,8 +524,46 @@ BaseApp::init() {
 		}
 
 		submesh.indexCount = meshComponent.m_numIndex;
+		submesh.localTransform = meshComponent.m_localTransform;
 		submesh.materialSlot = 0;
 		m_drakefireRenderMesh.getSubmeshes().push_back(std::move(submesh));
+	}
+
+	m_toadRenderMesh.destroy();
+	for (const MeshComponent& meshComponent : m_toadModel->GetMeshes()) {
+		Submesh submesh{};
+		hr = submesh.vertexBuffer.init(m_device, meshComponent, D3D11_BIND_VERTEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad vertex buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		hr = submesh.indexBuffer.init(m_device, meshComponent, D3D11_BIND_INDEX_BUFFER);
+		if (FAILED(hr)) {
+			ERROR("Main", "InitDevice",
+				("Failed to initialize Sci-Fi Toad index buffer. HRESULT: " + std::to_string(hr)).c_str());
+			return hr;
+		}
+
+		submesh.indexCount = meshComponent.m_numIndex;
+		submesh.localTransform = meshComponent.m_localTransform;
+		const std::string& meshName = meshComponent.m_name;
+		if (meshName.find("Eyes") != std::string::npos ||
+			(meshName.find("Head_low") != std::string::npos &&
+			meshName.find("GlassHead") == std::string::npos)) {
+			submesh.materialSlot = 2;
+		}
+		else if (meshName.find("Glass") != std::string::npos) {
+			submesh.materialSlot = 1;
+		}
+		else if (meshName.find("Head") != std::string::npos) {
+			submesh.materialSlot = 2;
+		}
+		else {
+			submesh.materialSlot = 0;
+		}
+		m_toadRenderMesh.getSubmeshes().push_back(std::move(submesh));
 	}
 
 	EU::TSharedPointer<MeshRendererComponent> meshRenderer = m_cyberGun->getComponent<MeshRendererComponent>();
@@ -408,6 +585,16 @@ BaseApp::init() {
 	drakefireMeshRenderer->setMaterialInstance(&m_drakefireMaterial);
 	drakefireMeshRenderer->setVisible(true);
 	drakefireMeshRenderer->setCastShadow(true);
+
+	EU::TSharedPointer<MeshRendererComponent> toadMeshRenderer = m_sciFiToad->getComponent<MeshRendererComponent>();
+	if (!toadMeshRenderer) {
+		toadMeshRenderer = EU::MakeShared<MeshRendererComponent>();
+		m_sciFiToad->addComponent(toadMeshRenderer);
+	}
+	toadMeshRenderer->setMesh(&m_toadRenderMesh);
+	toadMeshRenderer->setMaterialInstances({ &m_toadMaterial, &m_toadGlassMaterial, &m_toadHeadMaterial });
+	toadMeshRenderer->setVisible(true);
+	toadMeshRenderer->setCastShadow(true);
 
 	m_directionalLightActor = EU::MakeShared<Actor>(m_device);
 	if (!m_directionalLightActor.isNull()) {
@@ -581,6 +768,7 @@ BaseApp::destroy() {
 	m_renderPipeline.destroy();
 	m_cyberGunRenderMesh.destroy();
 	m_drakefireRenderMesh.destroy();
+	m_toadRenderMesh.destroy();
 	m_AlbedoSRV.destroy();
 	m_MetallicSRV.destroy();
 	m_NormalSRV.destroy();
@@ -592,6 +780,17 @@ BaseApp::destroy() {
 	m_drakefireMetallicSRV.destroy();
 	m_drakefireRoughnessSRV.destroy();
 	m_drakefireAOSRV.destroy();
+	m_toadAlbedoSRV.destroy();
+	m_toadNormalSRV.destroy();
+	m_toadMetallicSRV.destroy();
+	m_toadRoughnessSRV.destroy();
+	m_toadAOSRV.destroy();
+	m_toadGlassAlbedoSRV.destroy();
+	m_toadGlassNormalSRV.destroy();
+	m_toadGlassRoughnessSRV.destroy();
+	m_toadHeadAlbedoSRV.destroy();
+	m_toadHeadNormalSRV.destroy();
+	m_toadHeadRoughnessSRV.destroy();
 	m_defaultRasterizer.destroy();
 	m_defaultDepthStencil.destroy();
 	m_defaultSampler.destroy();
@@ -611,6 +810,8 @@ BaseApp::destroy() {
 	m_model = nullptr;
 	delete m_drakefireModel;
 	m_drakefireModel = nullptr;
+	delete m_toadModel;
+	m_toadModel = nullptr;
 	m_deviceContext.destroy();
 	m_device.destroy();
 }

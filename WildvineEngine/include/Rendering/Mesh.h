@@ -18,6 +18,11 @@ Submesh {
 	unsigned int indexCount = 0;  ///< Numero de indices a dibujar.
 	unsigned int startIndex = 0;  ///< Offset inicial dentro del index buffer.
 	unsigned int materialSlot = 0;///< Slot de material esperado por el renderer.
+	XMFLOAT4X4 localTransform = XMFLOAT4X4(
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f); ///< Transform local de la submalla dentro del modelo.
 };
 
 /**

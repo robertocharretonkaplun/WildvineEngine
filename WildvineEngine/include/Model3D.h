@@ -82,6 +82,7 @@ private:
 private:
 	FbxManager* lSdkManager;
 	FbxScene* lScene;
+	FbxAMatrix m_fbxModelRootInverse;
 	std::vector<std::string> textureFileNames;
 public:
 	ModelType m_modelType;

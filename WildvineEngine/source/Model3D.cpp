@@ -13,7 +13,7 @@
 
 namespace {
 constexpr uint32_t kModelCacheMagic = 0x48564D57; // WMVH
-constexpr uint32_t kModelCacheVersion = 1;
+constexpr uint32_t kModelCacheVersion = 10;
 
 struct ModelCacheEntry {
 	std::vector<MeshComponent> meshes;
@@ -56,6 +56,28 @@ bool ReadString(std::ifstream& stream, std::string& value) {
 		stream.read(&value[0], length);
 	}
 	return stream.good();
+}
+
+XMFLOAT4X4 ToFloat4x4(const FbxAMatrix& matrix) {
+	const FbxVector4 translation = matrix.GetT();
+	XMFLOAT4X4 out{};
+	out._11 = static_cast<float>(matrix.Get(0, 0));
+	out._12 = static_cast<float>(matrix.Get(1, 0));
+	out._13 = static_cast<float>(matrix.Get(2, 0));
+	out._14 = 0.0f;
+	out._21 = static_cast<float>(matrix.Get(0, 1));
+	out._22 = static_cast<float>(matrix.Get(1, 1));
+	out._23 = static_cast<float>(matrix.Get(2, 1));
+	out._24 = 0.0f;
+	out._31 = static_cast<float>(matrix.Get(0, 2));
+	out._32 = static_cast<float>(matrix.Get(1, 2));
+	out._33 = static_cast<float>(matrix.Get(2, 2));
+	out._34 = 0.0f;
+	out._41 = static_cast<float>(translation[0]);
+	out._42 = static_cast<float>(translation[1]);
+	out._43 = static_cast<float>(translation[2]);
+	out._44 = static_cast<float>(matrix.Get(3, 3));
+	return out;
 }
 }
 
@@ -198,6 +220,15 @@ Model3D::LoadFBXModel(const std::string& filePath) {
 		FbxNode* lRootNode = lScene->GetRootNode();
 		if (lRootNode) {
 			m_meshes.clear();
+			m_fbxModelRootInverse.SetIdentity();
+			if (lRootNode->GetChildCount() == 1) {
+				FbxNode* assetRoot = lRootNode->GetChild(0);
+				if (assetRoot && assetRoot->GetChildCount() > 0 &&
+					(!assetRoot->GetNodeAttribute() ||
+						assetRoot->GetNodeAttribute()->GetAttributeType() != FbxNodeAttribute::eMesh)) {
+					m_fbxModelRootInverse = assetRoot->EvaluateGlobalTransform().Inverse();
+				}
+			}
 			for (int i = 0; i < lRootNode->GetChildCount(); i++) {
 				ProcessFBXNode(lRootNode->GetChild(i));
 			}
@@ -490,11 +521,20 @@ Model3D::ProcessFBXMesh(FbxNode* node) {
   const FbxGeometryElementUV* uvElem = (mesh->GetElementUVCount() > 0) ? mesh->GetElementUV(0) : nullptr;
   const FbxGeometryElementTangent* tanElem = (mesh->GetElementTangentCount() > 0) ? mesh->GetElementTangent(0) : nullptr;
   const FbxGeometryElementBinormal* binElem = (mesh->GetElementBinormalCount() > 0) ? mesh->GetElementBinormal(0) : nullptr;
+  const FbxGeometryElementMaterial* materialElem = mesh->GetElementMaterial();
+
+  FbxAMatrix geometryTransform;
+  geometryTransform.SetT(node->GetGeometricTranslation(FbxNode::eSourcePivot));
+  geometryTransform.SetR(node->GetGeometricRotation(FbxNode::eSourcePivot));
+  geometryTransform.SetS(node->GetGeometricScaling(FbxNode::eSourcePivot));
+  const XMFLOAT4X4 localTransform = ToFloat4x4(m_fbxModelRootInverse * node->EvaluateGlobalTransform() * geometryTransform);
 
   std::vector<SimpleVertex> vertices;
   std::vector<unsigned int> indices;
+  std::vector<int> triangleMaterialSlots;
   vertices.reserve(mesh->GetPolygonCount() * 3);
   indices.reserve(mesh->GetPolygonCount() * 3);
+  triangleMaterialSlots.reserve(mesh->GetPolygonCount());
 
   auto readV2 = [](const FbxGeometryElementUV* elem, int cpIdx, int pvIdx) -> FbxVector2 {
     if (!elem) return FbxVector2(0, 0);
@@ -521,6 +561,19 @@ Model3D::ProcessFBXMesh(FbxNode* node) {
   {
     const int polySize = mesh->GetPolygonSize(p);
     std::vector<unsigned> cornerIdx; cornerIdx.reserve(polySize);
+    int polygonMaterialSlot = 0;
+    if (materialElem) {
+      if (materialElem->GetMappingMode() == FbxGeometryElement::eByPolygon) {
+        polygonMaterialSlot = materialElem->GetIndexArray().GetAt(p);
+      }
+      else if (materialElem->GetMappingMode() == FbxGeometryElement::eAllSame &&
+        materialElem->GetIndexArray().GetCount() > 0) {
+        polygonMaterialSlot = materialElem->GetIndexArray().GetAt(0);
+      }
+      if (polygonMaterialSlot < 0) {
+        polygonMaterialSlot = 0;
+      }
+    }
 
     for (int v = 0; v < polySize; ++v)
     {
@@ -567,6 +620,7 @@ Model3D::ProcessFBXMesh(FbxNode* node) {
       indices.push_back(cornerIdx[0]);
       indices.push_back(cornerIdx[k + 1]);
       indices.push_back(cornerIdx[k]);
+      triangleMaterialSlots.push_back(polygonMaterialSlot);
     }
   }
 
@@ -652,13 +706,44 @@ Model3D::ProcessFBXMesh(FbxNode* node) {
     norm3(v.Bitangent);
   }
 
-  MeshComponent mc;
-  mc.m_name = node->GetName();
-  mc.m_vertex = std::move(vertices);
-  mc.m_index = std::move(indices);
-  mc.m_numVertex = (int)mc.m_vertex.size();
-  mc.m_numIndex = (int)mc.m_index.size();
-  m_meshes.push_back(std::move(mc));
+  if (materialElem && !triangleMaterialSlots.empty()) {
+    std::unordered_map<int, size_t> slotToMeshIndex;
+    const size_t firstSplitMeshIndex = m_meshes.size();
+    for (size_t triangleIndex = 0; triangleIndex < triangleMaterialSlots.size(); ++triangleIndex) {
+      const int materialSlot = triangleMaterialSlots[triangleIndex];
+      auto it = slotToMeshIndex.find(materialSlot);
+      if (it == slotToMeshIndex.end()) {
+        MeshComponent splitMesh;
+        splitMesh.m_name = std::string(node->GetName()) + "_MaterialSlot_" + std::to_string(materialSlot);
+        splitMesh.m_localTransform = localTransform;
+        m_meshes.push_back(std::move(splitMesh));
+        it = slotToMeshIndex.emplace(materialSlot, m_meshes.size() - 1).first;
+      }
+
+      MeshComponent& splitMesh = m_meshes[it->second];
+      for (size_t corner = 0; corner < 3; ++corner) {
+        const unsigned int sourceIndex = indices[triangleIndex * 3 + corner];
+        splitMesh.m_vertex.push_back(vertices[sourceIndex]);
+        splitMesh.m_index.push_back(static_cast<unsigned int>(splitMesh.m_index.size()));
+      }
+    }
+
+    for (size_t meshIndex = firstSplitMeshIndex; meshIndex < m_meshes.size(); ++meshIndex) {
+      MeshComponent& splitMesh = m_meshes[meshIndex];
+      splitMesh.m_numVertex = static_cast<int>(splitMesh.m_vertex.size());
+      splitMesh.m_numIndex = static_cast<int>(splitMesh.m_index.size());
+    }
+  }
+  else {
+    MeshComponent mc;
+    mc.m_name = node->GetName();
+    mc.m_localTransform = localTransform;
+    mc.m_vertex = std::move(vertices);
+    mc.m_index = std::move(indices);
+    mc.m_numVertex = (int)mc.m_vertex.size();
+    mc.m_numIndex = (int)mc.m_index.size();
+    m_meshes.push_back(std::move(mc));
+  }
 }
 
 void Model3D::ProcessFBXMaterials(FbxSurfaceMaterial* material)
@@ -738,6 +823,11 @@ Model3D::LoadBinaryCache(const std::string& cachePath) {
 			return false;
 		}
 
+		stream.read(reinterpret_cast<char*>(&mesh.m_localTransform), sizeof(mesh.m_localTransform));
+		if (!stream.good()) {
+			return false;
+		}
+
 		uint32_t vertexCount = 0;
 		uint32_t indexCount = 0;
 		stream.read(reinterpret_cast<char*>(&vertexCount), sizeof(vertexCount));
@@ -797,6 +887,8 @@ Model3D::SaveBinaryCache(const std::string& cachePath) const {
 		if (!WriteString(stream, mesh.m_name)) {
 			return false;
 		}
+
+		stream.write(reinterpret_cast<const char*>(&mesh.m_localTransform), sizeof(mesh.m_localTransform));
 
 		const uint32_t vertexCount = static_cast<uint32_t>(mesh.m_vertex.size());
 		const uint32_t indexCount = static_cast<uint32_t>(mesh.m_index.size());

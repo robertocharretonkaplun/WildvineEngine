@@ -346,10 +346,6 @@ DeferredRenderer::renderGeometryObject(DeviceContext& deviceContext, const Rende
 		return;
 	}
 
-	XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(object.world));
-	m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
-	m_perObjectBuffer.render(deviceContext, 1, 1, false);
-
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	std::vector<Submesh>& submeshes = object.mesh->getSubmeshes();
@@ -368,6 +364,9 @@ DeferredRenderer::renderGeometryObject(DeviceContext& deviceContext, const Rende
 		if (!material) {
 			continue;
 		}
+		if (material->getDomain() == MaterialDomain::Transparent) {
+			continue;
+		}
 
 		if (material->getRasterizerState()) {
 			material->getRasterizerState()->render(deviceContext);
@@ -381,6 +380,11 @@ DeferredRenderer::renderGeometryObject(DeviceContext& deviceContext, const Rende
 		if (material->getSamplerState()) {
 			material->getSamplerState()->render(deviceContext, 0, 1);
 		}
+		XMMATRIX submeshWorld = XMLoadFloat4x4(&submesh.localTransform) * object.world;
+		XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(submeshWorld));
+		m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
+		m_perObjectBuffer.render(deviceContext, 1, 1, false);
+
 		materialInstance->bindTextures(deviceContext);
 
 		const MaterialParams& params = materialInstance->getParams();
@@ -478,10 +482,6 @@ DeferredRenderer::renderForwardObject(DeviceContext& deviceContext,
 		return;
 	}
 
-	XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(object.world));
-	m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
-	m_perObjectBuffer.render(deviceContext, 1, 1, true);
-
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	std::vector<Submesh>& submeshes = object.mesh->getSubmeshes();
@@ -500,12 +500,21 @@ DeferredRenderer::renderForwardObject(DeviceContext& deviceContext,
 		if (!material) {
 			continue;
 		}
+		if (passType == RenderPassType::Transparent &&
+			material->getDomain() != MaterialDomain::Transparent) {
+			continue;
+		}
+		if (passType != RenderPassType::Transparent &&
+			material->getDomain() == MaterialDomain::Transparent) {
+			continue;
+		}
 
 		if (material->getRasterizerState()) {
 			material->getRasterizerState()->render(deviceContext);
 		}
 
 		if (passType == RenderPassType::Transparent) {
+			deviceContext.OMSetBlendState(resolveBlendState(material), m_blendFactor, 0xffffffff);
 			m_transparentDepthStencil.render(deviceContext, 0, false);
 		}
 		else if (material->getDepthStencilState()) {
@@ -519,6 +528,11 @@ DeferredRenderer::renderForwardObject(DeviceContext& deviceContext,
 		if (material->getSamplerState()) {
 			material->getSamplerState()->render(deviceContext, 0, 1);
 		}
+
+		XMMATRIX submeshWorld = XMLoadFloat4x4(&submesh.localTransform) * object.world;
+		XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(submeshWorld));
+		m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
+		m_perObjectBuffer.render(deviceContext, 1, 1, true);
 
 		materialInstance->bindTextures(deviceContext);
 
@@ -577,16 +591,28 @@ DeferredRenderer::renderShadowObject(DeviceContext& deviceContext, const RenderO
 		return;
 	}
 
-	XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(object.world));
-	m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
-	m_perObjectBuffer.render(deviceContext, 1, 1, false);
-
 	m_shadowShader.render(deviceContext);
 	deviceContext.m_deviceContext->PSSetShader(nullptr, nullptr, 0);
 	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	std::vector<Submesh>& submeshes = object.mesh->getSubmeshes();
 	for (Submesh& submesh : submeshes) {
+		MaterialInstance* materialInstance = object.materialInstance;
+		if (submesh.materialSlot < object.materialInstances.size() &&
+			object.materialInstances[submesh.materialSlot]) {
+			materialInstance = object.materialInstances[submesh.materialSlot];
+		}
+
+		Material* material = materialInstance ? materialInstance->getMaterial() : nullptr;
+		if (material && material->getDomain() == MaterialDomain::Transparent) {
+			continue;
+		}
+
+		XMMATRIX submeshWorld = XMLoadFloat4x4(&submesh.localTransform) * object.world;
+		XMStoreFloat4x4(&m_cbPerObject.World, XMMatrixTranspose(submeshWorld));
+		m_perObjectBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerObject, 0, 0);
+		m_perObjectBuffer.render(deviceContext, 1, 1, false);
+
 		submesh.vertexBuffer.render(deviceContext, 0, 1);
 		submesh.indexBuffer.render(deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
 		deviceContext.DrawIndexed(submesh.indexCount, submesh.startIndex, 0);
