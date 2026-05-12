@@ -331,6 +331,12 @@ GUI::update(Viewport& viewport, Window& window) {
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
+	m_viewportVisibleThisFrame = false;
+	m_viewportDrawList = nullptr;
+	m_viewportWindow = nullptr;
+	m_viewportHovered = false;
+	m_viewportActive = false;
+	m_viewportFocused = false;
 	ImGuizmo::BeginFrame();
 	ImGuiIO& io = ImGui::GetIO();
 	if (io.KeyCtrl && ImGui::IsKeyPressed('S', false)) {
@@ -800,7 +806,18 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	if (hasLightComponent && BeginInspectorSection("Light")) {
 		LightData& light = lightComponent->getLightData();
 		if (BeginInspectorPropertyTable("##LightProperties")) {
-			DrawPropertyValueText("Type", GetLightTypeLabel(light.type));
+			static const char* kLightTypes[] = { "Directional", "Point" };
+			int currentLightType = static_cast<int>(light.type);
+			if (currentLightType > static_cast<int>(LightType::Point)) {
+				currentLightType = static_cast<int>(LightType::Point);
+			}
+			DrawPropertyLabel("Type");
+			if (ImGui::Combo("##LightType", &currentLightType, kLightTypes, IM_ARRAYSIZE(kLightTypes))) {
+				light.type = static_cast<LightType>(currentLightType);
+				if (light.type == LightType::Point && light.range <= 0.0f) {
+					light.range = 12.0f;
+				}
+			}
 			bool castShadow = lightComponent->canCastShadow();
 			DrawPropertyToggle("Cast Shadow", "##LightCastShadow", &castShadow);
 			lightComponent->setCastShadow(castShadow);
@@ -808,7 +825,7 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 			ImGui::ColorEdit3("##LightColor", &light.color.x);
 			DrawPropertyLabel("Intensity");
 			ImGui::SliderFloat("##LightIntensity", &light.intensity, 0.0f, 10.0f);
-			if (light.type == LightType::Directional || light.type == LightType::Spot) {
+			if (light.type == LightType::Spot) {
 				DrawPropertyLabel("Direction");
 				ImGui::SliderFloat3("##LightDirection", &light.direction.x, -1.0f, 1.0f);
 			}
@@ -903,6 +920,8 @@ GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 
 void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> actor)
 {
+	(void)window;
+	if (!m_viewportVisibleThisFrame) return;
 	if (actor.isNull()) return;
 	auto transform = actor->getComponent<Transform>();
 	if (transform.isNull()) return;
@@ -936,11 +955,8 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 
 	ImGuizmo::SetOrthographic(false);
 
-	// MUY IMPORTANTE: usar el drawlist del viewport, no el actual
-	if (m_viewportDrawList)
-		ImGuizmo::SetDrawlist(m_viewportDrawList);
-	else
-		ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
+	ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
+	ImGuizmo::SetAlternativeWindow(m_viewportWindow);
 
 	ImGuizmo::SetID(0);
 	ImGuizmo::SetGizmoSizeClipSpace(0.12f);
@@ -967,6 +983,7 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 		nullptr,
 		useSnap ? snap : nullptr
 	);
+	ImGuizmo::SetAlternativeWindow(nullptr);
 
 	m_isUsingGizmo = ImGuizmo::IsUsing();
 
@@ -1261,9 +1278,9 @@ void GUI::drawStudioTopRibbon()
 		}
 		ImGui::SameLine();
 
-		if (ribbonButton("##Terrain", "Terrain", "Edit", btnSize, false))
+		if (ribbonButton("##LightActor", "Light", "Actor", btnSize, false))
 		{
-			// abrir terrain tools
+			m_requestCreateLightActor = true;
 		}
 		ImGui::SameLine();
 
@@ -1304,8 +1321,14 @@ void GUI::drawStudioTopRibbon()
 	ImGui::PopStyleVar(3);
 }
 
-void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
+void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
+	const std::vector<EU::TSharedPointer<Actor>>& actors,
+	Camera& camera,
+	Window& window,
+	EU::TSharedPointer<Actor> selectedActor,
+	ID3D11ShaderResourceView* lightIconSRV)
 {
+	(void)window;
 	ImGuiWindowFlags flags =
 		ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoScrollWithMouse | 
@@ -1316,7 +1339,9 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 
 	if (ImGui::Begin("Viewport", nullptr, flags))
 	{
-		m_viewportDrawList = ImGui::GetWindowDrawList();
+		ImDrawList* viewportWindowDrawList = ImGui::GetWindowDrawList();
+		m_viewportWindow = ImGui::GetCurrentWindow();
+		m_viewportVisibleThisFrame = true;
 
 		ImVec2 panelMin = ImGui::GetCursorScreenPos();
 		ImVec2 panelSize = ImGui::GetContentRegionAvail();
@@ -1333,7 +1358,7 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 			ImGui::InvisibleButton("##ViewportSurface", panelSize);
 			ImVec2 itemMin = ImGui::GetItemRectMin();
 			ImVec2 itemMax = ImGui::GetItemRectMax();
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			ImDrawList* drawList = viewportWindowDrawList;
 
 			drawList->AddRectFilled(itemMin, itemMax, IM_COL32(20, 20, 25, 255));
 			drawList->AddText(
@@ -1347,15 +1372,82 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV)
 		ImVec2 itemMax = ImGui::GetItemRectMax();
 		m_viewportPos = itemMin;
 		m_viewportSize = ImVec2(itemMax.x - itemMin.x, itemMax.y - itemMin.y);
+		m_viewportDrawList = viewportWindowDrawList;
 
 		// IMPORTANTE: el hover/active del item imagen
 		m_viewportHovered = ImGui::IsItemHovered();
 		m_viewportActive = ImGui::IsItemActive();
 		m_viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+		ImDrawList* gizmoDrawList = m_viewportDrawList;
+		m_viewportDrawList = ImGui::GetForegroundDrawList();
+		drawLightIcons(actors, camera, lightIconSRV);
+		m_viewportDrawList = gizmoDrawList;
+		editTransform(camera, window, selectedActor);
 	}
 	ImGui::End();
 
 	ImGui::PopStyleVar();
+}
+
+void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
+	Camera& camera,
+	ID3D11ShaderResourceView* lightIconSRV)
+{
+	if (!m_viewportDrawList || m_viewportSize.x <= 1.0f || m_viewportSize.y <= 1.0f) {
+		return;
+	}
+
+	const ImVec2 iconSize(26.0f, 26.0f);
+
+	for (const auto& actor : actors) {
+		if (actor.isNull() || actor->getComponent<LightComponent>().isNull()) {
+			continue;
+		}
+
+		auto transform = actor->getComponent<Transform>();
+		if (transform.isNull()) {
+			continue;
+		}
+
+		const EU::Vector3& position = transform->getPosition();
+		XMVECTOR worldPos = XMVectorSet(position.x, position.y, position.z, 1.0f);
+		XMVECTOR projected = XMVector3Project(worldPos,
+			m_viewportPos.x,
+			m_viewportPos.y,
+			m_viewportSize.x,
+			m_viewportSize.y,
+			0.0f,
+			1.0f,
+			camera.getProj(),
+			camera.getView(),
+			XMMatrixIdentity());
+
+		const float screenX = XMVectorGetX(projected);
+		const float screenY = XMVectorGetY(projected);
+		const float screenZ = XMVectorGetZ(projected);
+		if (screenZ < 0.0f || screenZ > 1.0f) {
+			continue;
+		}
+
+		ImVec2 center(screenX, screenY);
+
+		if (center.x < m_viewportPos.x || center.x > m_viewportPos.x + m_viewportSize.x ||
+			center.y < m_viewportPos.y || center.y > m_viewportPos.y + m_viewportSize.y) {
+			continue;
+		}
+
+		ImVec2 iconMin(center.x - iconSize.x * 0.5f, center.y - iconSize.y * 0.5f);
+		ImVec2 iconMax(center.x + iconSize.x * 0.5f, center.y + iconSize.y * 0.5f);
+		if (lightIconSRV) {
+			m_viewportDrawList->AddImage((ImTextureID)lightIconSRV, iconMin, iconMax,
+				ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), IM_COL32(255, 236, 150, 255));
+		}
+		else {
+			m_viewportDrawList->AddCircleFilled(center, 9.0f, IM_COL32(255, 214, 92, 230), 16);
+			m_viewportDrawList->AddCircle(center, 11.0f, IM_COL32(255, 248, 214, 255), 16, 2.0f);
+		}
+	}
 }
 
 void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,

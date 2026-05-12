@@ -136,6 +136,10 @@ BaseApp::init() {
 		"Skybox/cubemap_5.png"
 	};
 	m_skyboxTex.CreateCubemap(m_device, m_deviceContext, faces, false);
+	HRESULT lightIconHr = m_lightIconTexture.init(m_device, "slate/icons/light-bulb", PNG);
+	if (FAILED(lightIconHr)) {
+		MESSAGE("Main", "InitDevice", "Light actor icon not found. Continuing with fallback light marker.");
+	}
 
 	// Set CyberGun Actor
 	m_cyberGun = EU::MakeShared<Actor>(m_device);
@@ -598,19 +602,28 @@ BaseApp::init() {
 
 	m_directionalLightActor = EU::MakeShared<Actor>(m_device);
 	if (!m_directionalLightActor.isNull()) {
-		m_directionalLightActor->setName("DirectionalLight");
+		m_directionalLightActor->setName("Light Actor 1");
 		EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
 		if (!lightComponent) {
 			lightComponent = EU::MakeShared<LightComponent>();
 			m_directionalLightActor->addComponent(lightComponent);
 		}
 
-		lightComponent->getLightData().type = LightType::Directional;
+		lightComponent->getLightData().type = LightType::Point;
 		lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
 		lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
 		lightComponent->getLightData().intensity = 1.0f;
+		lightComponent->getLightData().range = 12.0f;
 		lightComponent->setCastShadow(false);
 
+		EU::TSharedPointer<Transform> transform = m_directionalLightActor->getComponent<Transform>();
+		if (transform) {
+			transform->setTransform(EU::Vector3(0.0f, 3.0f, 0.0f),
+				EU::Vector3(0.0f, 0.0f, 0.0f),
+				EU::Vector3(1.0f, 1.0f, 1.0f));
+		}
+
+		m_actors.push_back(m_directionalLightActor);
 		m_sceneGraph.addEntity(m_directionalLightActor.get());
 	}
 
@@ -651,9 +664,21 @@ BaseApp::update(float deltaTime) {
 	}
 	// Update User Interface
 	m_gui.update(m_viewport, m_window);
+	m_camera.updateViewMatrix();
+	if (m_gui.consumeCreateLightActorRequest()) {
+		EU::TSharedPointer<Actor> lightActor = createLightActor();
+		if (!lightActor.isNull()) {
+			m_gui.selectedActorIndex = static_cast<int>(m_actors.size()) - 1;
+		}
+	}
+	EU::TSharedPointer<Actor> selectedActor;
+	if (m_gui.selectedActorIndex >= 0 &&
+		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
+		selectedActor = m_actors[m_gui.selectedActorIndex];
+	}
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
-	m_gui.drawViewportPanel(m_editorViewportPass.getSRV());
+	m_gui.drawViewportPanel(m_editorViewportPass.getSRV(), m_actors, m_camera, m_window, selectedActor, m_lightIconTexture.m_textureFromImg);
 	m_gui.drawRenderDebugPanel(m_renderPipeline.getPreShadowSRV(), m_editorViewportPass.getSRV(), m_renderPipeline.getShadowMapSRV());
 	m_gui.drawGBufferDebugPanel(m_renderPipeline.getGBufferAlbedoMetallicSRV(),
 		m_renderPipeline.getGBufferNormalRoughnessSRV(),
@@ -661,13 +686,11 @@ BaseApp::update(float deltaTime) {
 		m_renderPipeline.getGBufferEmissiveAlphaSRV());
 	m_renderPipeline.setShadowFactorDebugEnabled(m_gui.m_visualizeDeferredShadowFactor);
 	m_gui.outliner(m_actors);
-	EU::TSharedPointer<Actor> selectedActor;
 	if (m_gui.selectedActorIndex >= 0 &&
 		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
 		selectedActor = m_actors[m_gui.selectedActorIndex];
 	}
 	m_gui.inspectorGeneral(selectedActor);
-	m_gui.editTransform(m_camera, m_window, selectedActor);
 	if (m_gui.consumeSaveSceneRequest()) {
 		saveScene(getDefaultScenePath());
 	}
@@ -707,24 +730,10 @@ BaseApp::update(float deltaTime) {
 		}
 	}
 
-	// Actualizar la matriz de proyeccion y vista
-	m_camera.updateViewMatrix();
-
 	XMStoreFloat4x4(&m_constantBufferStruct.View, XMMatrixTranspose(m_camera.getView()));
 	XMStoreFloat4x4(&m_constantBufferStruct.Projection, XMMatrixTranspose(m_camera.getProj()));
 	m_constantBufferStruct.CameraPos = m_camera.getPosition();
 	
-	// Luz blanca fuerte
-	m_gui.vec3Control("Light Direction", &m_constantBufferStruct.LightDir.x, 0.1f);
-	m_gui.vec3Control("Light Color", &m_constantBufferStruct.LightColor.x, 0.1f);
-	if (!m_directionalLightActor.isNull()) {
-		EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
-		if (lightComponent) {
-			lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
-			lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
-		}
-	}
-
 	// Update Skybox Pass -> Solo necesita la vista sin traslacion + proyeccion para funcionar correctamente (ver metodo update de Skybox)
 	m_skybox.update(m_deviceContext, m_camera);
 
@@ -791,6 +800,7 @@ BaseApp::destroy() {
 	m_toadHeadAlbedoSRV.destroy();
 	m_toadHeadNormalSRV.destroy();
 	m_toadHeadRoughnessSRV.destroy();
+	m_lightIconTexture.destroy();
 	m_defaultRasterizer.destroy();
 	m_defaultDepthStencil.destroy();
 	m_defaultSampler.destroy();
@@ -942,6 +952,49 @@ std::string BaseApp::getDefaultScenePath() const
 {
 	CreateDirectoryA("Saved", nullptr);
 	return "Saved/DefaultScene.wvscene";
+}
+
+EU::TSharedPointer<Actor> BaseApp::createLightActor(const std::string& name)
+{
+	EU::TSharedPointer<Actor> lightActor = EU::MakeShared<Actor>(m_device);
+	if (lightActor.isNull()) {
+		ERROR("Main", "createLightActor", "Failed to create Light Actor.");
+		return lightActor;
+	}
+
+	size_t lightActorCount = 0;
+	for (const auto& actor : m_actors) {
+		if (!actor.isNull() && !actor->getComponent<LightComponent>().isNull()) {
+			++lightActorCount;
+		}
+	}
+
+	lightActor->setName(name.empty() ? "Light Actor " + std::to_string(lightActorCount + 1) : name);
+
+	EU::TSharedPointer<LightComponent> lightComponent = lightActor->getComponent<LightComponent>();
+	if (!lightComponent) {
+		lightComponent = EU::MakeShared<LightComponent>();
+		lightActor->addComponent(lightComponent);
+	}
+
+	lightComponent->getLightData().type = LightType::Point;
+	lightComponent->getLightData().direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
+	lightComponent->getLightData().color = EU::Vector3(1.0f, 1.0f, 1.0f);
+	lightComponent->getLightData().intensity = 1.0f;
+	lightComponent->getLightData().range = 12.0f;
+	lightComponent->setCastShadow(false);
+
+	EU::TSharedPointer<Transform> transform = lightActor->getComponent<Transform>();
+	if (transform) {
+		const float lightOffset = static_cast<float>(lightActorCount) * 2.0f;
+		transform->setTransform(EU::Vector3(lightOffset, 3.0f, 0.0f),
+			EU::Vector3(0.0f, 0.0f, 0.0f),
+			EU::Vector3(1.0f, 1.0f, 1.0f));
+	}
+
+	m_actors.push_back(lightActor);
+	m_sceneGraph.addEntity(lightActor.get());
+	return lightActor;
 }
 
 bool BaseApp::saveScene(const std::string& path)

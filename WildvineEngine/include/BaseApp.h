@@ -124,6 +124,8 @@ public:
 	 */
 	std::string getDefaultScenePath() const;
 private:
+	EU::TSharedPointer<Actor> createLightActor(const std::string& name = std::string());
+
 	static LRESULT CALLBACK 
 	WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -191,6 +193,7 @@ private:
 
 	Skybox m_skybox;
 	Texture															m_skyboxTex;
+	Texture m_lightIconTexture;
 	RasterizerState m_defaultRasterizer;
 	DepthStencilState m_defaultDepthStencil;
 	SamplerState m_defaultSampler;

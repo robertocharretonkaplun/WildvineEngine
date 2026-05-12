@@ -12,9 +12,9 @@ class
 Transform : public Component {
 public:
   // Constructor que inicializa posición, rotación y escala por defecto
-  Transform() : position(), 
-                rotation(), 
-                scale(), 
+  Transform() : position(0.0f, 0.0f, 0.0f), 
+                rotation(0.0f, 0.0f, 0.0f), 
+                scale(1.0f, 1.0f, 1.0f), 
                 matrix(), 
                 worldMatrix(),
                 Component(ComponentType::TRANSFORM) {}

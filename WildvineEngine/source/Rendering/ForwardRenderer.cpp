@@ -83,11 +83,34 @@ ForwardRenderer::updatePerFrame(const Camera& camera,
 	m_cbPerFrame.CameraPos = camera.getPosition();
 	m_cbPerFrame.LightDir = EU::Vector3(0.0f, -1.0f, 0.0f);
 	m_cbPerFrame.LightColor = EU::Vector3(1.0f, 1.0f, 1.0f);
+	m_cbPerFrame.LightPosition = EU::Vector3(0.0f, 3.0f, 0.0f);
+	m_cbPerFrame.LightRange = 10.0f;
+	m_cbPerFrame.LightType = static_cast<int>(LightType::Directional);
+	m_cbPerFrame.LightCount = 0;
+	for (int lightIndex = 0; lightIndex < kMaxSceneLights; ++lightIndex) {
+		m_cbPerFrame.LightPositionsRanges[lightIndex] = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_cbPerFrame.LightColorsTypes[lightIndex] = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_cbPerFrame.LightDirectionsIntensities[lightIndex] = XMFLOAT4(0.0f, -1.0f, 0.0f, 0.0f);
+	}
 
 	if (!scene.directionalLights.empty()) {
-		const LightData& mainLight = scene.directionalLights.front();
+		const int lightCount = static_cast<int>(std::min<size_t>(scene.directionalLights.size(), kMaxSceneLights));
+		m_cbPerFrame.LightCount = lightCount;
+		for (int lightIndex = 0; lightIndex < lightCount; ++lightIndex) {
+			const LightData& light = scene.directionalLights[lightIndex];
+			const float range = light.range > 0.0f ? light.range : 10.0f;
+			const EU::Vector3 lightColor = light.color * light.intensity;
+			m_cbPerFrame.LightPositionsRanges[lightIndex] = XMFLOAT4(light.position.x, light.position.y, light.position.z, range);
+			m_cbPerFrame.LightColorsTypes[lightIndex] = XMFLOAT4(lightColor.x, lightColor.y, lightColor.z, static_cast<float>(static_cast<int>(light.type)));
+			m_cbPerFrame.LightDirectionsIntensities[lightIndex] = XMFLOAT4(light.direction.x, light.direction.y, light.direction.z, light.intensity);
+		}
+
+		const LightData& mainLight = scene.directionalLights[0];
 		m_cbPerFrame.LightDir = mainLight.direction;
 		m_cbPerFrame.LightColor = mainLight.color * mainLight.intensity;
+		m_cbPerFrame.LightPosition = mainLight.position;
+		m_cbPerFrame.LightRange = mainLight.range > 0.0f ? mainLight.range : 10.0f;
+		m_cbPerFrame.LightType = static_cast<int>(mainLight.type);
 	}
 
 	m_perFrameBuffer.update(deviceContext, nullptr, 0, nullptr, &m_cbPerFrame, 0, 0);

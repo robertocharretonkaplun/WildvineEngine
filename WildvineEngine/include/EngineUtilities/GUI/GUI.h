@@ -103,7 +103,16 @@ public:
   void
   drawStudioTopRibbon();
 
-  void drawViewportPanel(ID3D11ShaderResourceView* viewportSRV);
+  void drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
+                         const std::vector<EU::TSharedPointer<Actor>>& actors,
+                         Camera& camera,
+                         Window& window,
+                         EU::TSharedPointer<Actor> selectedActor,
+                         ID3D11ShaderResourceView* lightIconSRV);
+
+  void drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
+                      Camera& camera,
+                      ID3D11ShaderResourceView* lightIconSRV);
 
   void drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
                             ID3D11ShaderResourceView* finalViewportSRV,
@@ -127,6 +136,13 @@ public:
     return requested;
   }
 
+  bool
+  consumeCreateLightActorRequest() {
+    const bool requested = m_requestCreateLightActor;
+    m_requestCreateLightActor = false;
+    return requested;
+  }
+
 private:
 
   bool checkboxValue = true;
@@ -136,7 +152,10 @@ private:
 
   bool show_exit_popup = false; // Variable de estado para el popup
   bool m_requestSaveScene = false;
+  bool m_requestCreateLightActor = false;
   ImDrawList* m_viewportDrawList = nullptr;
+  ImGuiWindow* m_viewportWindow = nullptr;
+  bool m_viewportVisibleThisFrame = false;
   bool m_viewportActive = false;
   ID3D11ShaderResourceView* m_renderDebugPreShadowSRV = nullptr;
   ID3D11ShaderResourceView* m_renderDebugFinalSRV = nullptr;

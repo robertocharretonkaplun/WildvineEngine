@@ -126,12 +126,16 @@ namespace EU {
 
 		void
     zero() {
-      Vector3(0, 0, 0);
+      x = 0.0f;
+      y = 0.0f;
+      z = 0.0f;
     }
     
     void
     one() {
-      Vector3(1,1,1);
+      x = 1.0f;
+      y = 1.0f;
+      z = 1.0f;
     }
 
 

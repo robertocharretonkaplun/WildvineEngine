@@ -230,7 +230,22 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 
 		auto lightComponent = entity->getComponent<LightComponent>();
 		if (lightComponent) {
-			outScene.directionalLights.push_back(lightComponent->getLightData());
+			LightData lightData = lightComponent->getLightData();
+			auto transform = entity->getComponent<Transform>();
+			if (transform) {
+				XMFLOAT4X4 worldMatrix{};
+				XMStoreFloat4x4(&worldMatrix, transform->worldMatrix);
+				lightData.position = EU::Vector3(worldMatrix._41, worldMatrix._42, worldMatrix._43);
+
+				XMVECTOR localLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+				XMVECTOR worldLightDirection = XMVector3Normalize(XMVector3TransformNormal(localLightDirection, transform->worldMatrix));
+				lightData.direction = EU::Vector3(
+					XMVectorGetX(worldLightDirection),
+					XMVectorGetY(worldLightDirection),
+					XMVectorGetZ(worldLightDirection));
+			}
+
+			outScene.directionalLights.push_back(lightData);
 		}
 
 		auto meshRenderer = entity->getComponent<MeshRendererComponent>();
