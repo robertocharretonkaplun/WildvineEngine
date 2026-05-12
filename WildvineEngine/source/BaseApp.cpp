@@ -10,6 +10,35 @@
 #include <fstream>
 #include <iomanip>
 
+namespace {
+	bool isSerializedLightActorName(const std::string& actorName)
+	{
+		return actorName.rfind("Light Actor", 0) == 0;
+	}
+
+	void ensureDefaultLightComponent(const EU::TSharedPointer<Actor>& actor)
+	{
+		if (actor.isNull()) {
+			return;
+		}
+
+		EU::TSharedPointer<LightComponent> lightComponent = actor->getComponent<LightComponent>();
+		if (!lightComponent) {
+			lightComponent = EU::MakeShared<LightComponent>();
+			actor->addComponent(lightComponent);
+		}
+
+		LightData& light = lightComponent->getLightData();
+		light.type = LightType::Point;
+		light.color = EU::Vector3(1.0f, 1.0f, 1.0f);
+		light.intensity = 1.0f;
+		light.direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
+		light.range = 12.0f;
+		light.spotAngle = 0.0f;
+		lightComponent->setCastShadow(false);
+	}
+}
+
 HRESULT
 BaseApp::awake() {
 	HRESULT hr = S_OK;
@@ -1060,6 +1089,23 @@ bool BaseApp::saveScene(const std::string& path)
 			}
 		}
 
+		EU::TSharedPointer<LightComponent> lightComponent = actor->getComponent<LightComponent>();
+		if (lightComponent) {
+			const LightData& light = lightComponent->getLightData();
+			stream << "LIGHT_COMPONENT "
+				<< static_cast<int>(light.type) << " "
+				<< light.color.x << " "
+				<< light.color.y << " "
+				<< light.color.z << " "
+				<< light.intensity << " "
+				<< light.direction.x << " "
+				<< light.direction.y << " "
+				<< light.direction.z << " "
+				<< light.range << " "
+				<< light.spotAngle << " "
+				<< (lightComponent->canCastShadow() ? 1 : 0) << "\n";
+		}
+
 		stream << "END_ACTOR\n";
 	}
 
@@ -1107,11 +1153,23 @@ bool BaseApp::loadScene(const std::string& path)
 			std::string actorName;
 			stream >> actorIndex >> std::quoted(actorName);
 			currentActor = EU::TSharedPointer<Actor>();
+			while (actorIndex >= m_actors.size()) {
+				EU::TSharedPointer<Actor> newActor = EU::MakeShared<Actor>(m_device);
+				if (newActor.isNull()) {
+					break;
+				}
+				newActor->setName("Actor " + std::to_string(m_actors.size() + 1));
+				m_actors.push_back(newActor);
+				m_sceneGraph.addEntity(newActor.get());
+			}
 			if (actorIndex < m_actors.size()) {
 				currentActor = m_actors[actorIndex];
 			}
 			if (!currentActor.isNull()) {
 				currentActor->setName(actorName);
+				if (isSerializedLightActorName(actorName)) {
+					ensureDefaultLightComponent(currentActor);
+				}
 			}
 		}
 		else if (token == "POSITION" && !currentActor.isNull()) {
@@ -1188,6 +1246,35 @@ bool BaseApp::loadScene(const std::string& path)
 					}
 				}
 			}
+		}
+		else if (token == "LIGHT_COMPONENT" && !currentActor.isNull()) {
+			int type = 0;
+			int castShadow = 0;
+			LightData light{};
+			stream >> type
+				>> light.color.x
+				>> light.color.y
+				>> light.color.z
+				>> light.intensity
+				>> light.direction.x
+				>> light.direction.y
+				>> light.direction.z
+				>> light.range
+				>> light.spotAngle
+				>> castShadow;
+
+			if (type < static_cast<int>(LightType::Directional) || type > static_cast<int>(LightType::Spot)) {
+				type = static_cast<int>(LightType::Point);
+			}
+			light.type = static_cast<LightType>(type);
+
+			EU::TSharedPointer<LightComponent> lightComponent = currentActor->getComponent<LightComponent>();
+			if (!lightComponent) {
+				lightComponent = EU::MakeShared<LightComponent>();
+				currentActor->addComponent(lightComponent);
+			}
+			lightComponent->getLightData() = light;
+			lightComponent->setCastShadow(castShadow != 0);
 		}
 		else if (token == "LIGHT") {
 			stream >> m_constantBufferStruct.LightDir.x
