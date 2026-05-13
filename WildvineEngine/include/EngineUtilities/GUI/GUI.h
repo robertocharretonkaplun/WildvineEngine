@@ -121,7 +121,8 @@ public:
   void drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
                              ID3D11ShaderResourceView* normalRoughnessSRV,
                              ID3D11ShaderResourceView* worldAoSRV,
-                             ID3D11ShaderResourceView* emissiveAlphaSRV);
+                             ID3D11ShaderResourceView* emissiveAlphaSRV,
+                             EU::TSharedPointer<Actor> selectedActor);
 
   void drawEditorDockspace();
 
@@ -164,6 +165,7 @@ private:
 public:
   bool m_isUsingGizmo = false;               ///< Indica si el gizmo esta capturando entrada del usuario.
   bool m_visualizeDeferredShadowFactor = false; ///< Muestra el factor de sombra diferido en escala de grises.
+  int m_deferredDebugViewMode = 0;           ///< Canal deferred mostrado directamente en el viewport.
   int selectedActorIndex = -1;               ///< Indice del actor seleccionado en el outliner.
   ImVec2 m_viewportPos = ImVec2(0.0f, 0.0f); ///< Posicion del panel de viewport en pantalla.
   ImVec2 m_viewportSize = ImVec2(0.0f, 0.0f);///< Tamano actual del viewport del editor.

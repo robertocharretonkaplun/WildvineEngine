@@ -113,6 +113,14 @@ RenderPipeline::setShadowFactorDebugEnabled(bool enabled) {
 	}
 }
 
+void
+RenderPipeline::setDeferredDebugViewMode(int mode) {
+	ISceneRenderer* renderer = resolveRenderer(RendererType::Deferred);
+	if (renderer) {
+		renderer->setDeferredDebugViewMode(mode);
+	}
+}
+
 HRESULT
 RenderPipeline::ensureRendererInitialized(RendererType rendererType, Device& device) {
 	switch (rendererType) {

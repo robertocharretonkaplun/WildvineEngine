@@ -17,6 +17,28 @@
 #include "EngineUtilities/Utilities/LayoutBuilder.h"
 #include "EngineUtilities/Utilities/Skybox.h"
 
+namespace {
+const LightData*
+findPrimaryShadowLight(const RenderScene& scene) {
+	for (const LightData& light : scene.directionalLights) {
+		if (light.type == LightType::Directional) {
+			return &light;
+		}
+	}
+
+	return scene.directionalLights.empty() ? nullptr : &scene.directionalLights.front();
+}
+
+void
+writeLightToFrameBuffer(CBPerFrame& buffer, int lightIndex, const LightData& light) {
+	const float range = light.range > 0.0f ? light.range : 10.0f;
+	const EU::Vector3 lightColor = light.color * light.intensity;
+	buffer.LightPositionsRanges[lightIndex] = XMFLOAT4(light.position.x, light.position.y, light.position.z, range);
+	buffer.LightColorsTypes[lightIndex] = XMFLOAT4(lightColor.x, lightColor.y, lightColor.z, static_cast<float>(static_cast<int>(light.type)));
+	buffer.LightDirectionsIntensities[lightIndex] = XMFLOAT4(light.direction.x, light.direction.y, light.direction.z, light.intensity);
+}
+}
+
 HRESULT
 ForwardRenderer::init(Device& device) {
 	HRESULT hr = m_perFrameBuffer.init(device, sizeof(CBPerFrame));
@@ -94,18 +116,20 @@ ForwardRenderer::updatePerFrame(const Camera& camera,
 	}
 
 	if (!scene.directionalLights.empty()) {
-		const int lightCount = static_cast<int>(std::min<size_t>(scene.directionalLights.size(), kMaxSceneLights));
-		m_cbPerFrame.LightCount = lightCount;
-		for (int lightIndex = 0; lightIndex < lightCount; ++lightIndex) {
-			const LightData& light = scene.directionalLights[lightIndex];
-			const float range = light.range > 0.0f ? light.range : 10.0f;
-			const EU::Vector3 lightColor = light.color * light.intensity;
-			m_cbPerFrame.LightPositionsRanges[lightIndex] = XMFLOAT4(light.position.x, light.position.y, light.position.z, range);
-			m_cbPerFrame.LightColorsTypes[lightIndex] = XMFLOAT4(lightColor.x, lightColor.y, lightColor.z, static_cast<float>(static_cast<int>(light.type)));
-			m_cbPerFrame.LightDirectionsIntensities[lightIndex] = XMFLOAT4(light.direction.x, light.direction.y, light.direction.z, light.intensity);
+		const LightData* primaryShadowLight = findPrimaryShadowLight(scene);
+		int lightCount = 0;
+		if (primaryShadowLight) {
+			writeLightToFrameBuffer(m_cbPerFrame, lightCount++, *primaryShadowLight);
 		}
+		for (const LightData& light : scene.directionalLights) {
+			if (&light == primaryShadowLight || lightCount >= kMaxSceneLights) {
+				continue;
+			}
+			writeLightToFrameBuffer(m_cbPerFrame, lightCount++, light);
+		}
+		m_cbPerFrame.LightCount = lightCount;
 
-		const LightData& mainLight = scene.directionalLights[0];
+		const LightData& mainLight = primaryShadowLight ? *primaryShadowLight : scene.directionalLights[0];
 		m_cbPerFrame.LightDir = mainLight.direction;
 		m_cbPerFrame.LightColor = mainLight.color * mainLight.intensity;
 		m_cbPerFrame.LightPosition = mainLight.position;
@@ -450,8 +474,9 @@ ForwardRenderer::createShadowResources(Device& device) {
 void
 ForwardRenderer::updateLightMatrices(const Camera& camera, const RenderScene& scene) {
 	EU::Vector3 lightDir = EU::Vector3(0.0f, -1.0f, 0.0f);
-	if (!scene.directionalLights.empty()) {
-		lightDir = scene.directionalLights.front().direction;
+	const LightData* primaryShadowLight = findPrimaryShadowLight(scene);
+	if (primaryShadowLight) {
+		lightDir = primaryShadowLight->direction;
 	}
 
 	XMVECTOR lightDirVec = XMVector3Normalize(XMVectorSet(lightDir.x, lightDir.y, lightDir.z, 0.0f));

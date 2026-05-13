@@ -29,13 +29,13 @@ namespace {
 		}
 
 		LightData& light = lightComponent->getLightData();
-		light.type = LightType::Point;
+		light.type = LightType::Directional;
 		light.color = EU::Vector3(1.0f, 1.0f, 1.0f);
 		light.intensity = 1.0f;
 		light.direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
 		light.range = 12.0f;
 		light.spotAngle = 0.0f;
-		lightComponent->setCastShadow(false);
+		lightComponent->setCastShadow(true);
 	}
 }
 
@@ -638,12 +638,12 @@ BaseApp::init() {
 			m_directionalLightActor->addComponent(lightComponent);
 		}
 
-		lightComponent->getLightData().type = LightType::Point;
+		lightComponent->getLightData().type = LightType::Directional;
 		lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
 		lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
 		lightComponent->getLightData().intensity = 1.0f;
 		lightComponent->getLightData().range = 12.0f;
-		lightComponent->setCastShadow(false);
+		lightComponent->setCastShadow(true);
 
 		EU::TSharedPointer<Transform> transform = m_directionalLightActor->getComponent<Transform>();
 		if (transform) {
@@ -712,8 +712,10 @@ BaseApp::update(float deltaTime) {
 	m_gui.drawGBufferDebugPanel(m_renderPipeline.getGBufferAlbedoMetallicSRV(),
 		m_renderPipeline.getGBufferNormalRoughnessSRV(),
 		m_renderPipeline.getGBufferWorldAoSRV(),
-		m_renderPipeline.getGBufferEmissiveAlphaSRV());
+		m_renderPipeline.getGBufferEmissiveAlphaSRV(),
+		selectedActor);
 	m_renderPipeline.setShadowFactorDebugEnabled(m_gui.m_visualizeDeferredShadowFactor);
+	m_renderPipeline.setDeferredDebugViewMode(m_gui.m_deferredDebugViewMode);
 	m_gui.outliner(m_actors);
 	if (m_gui.selectedActorIndex >= 0 &&
 		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {

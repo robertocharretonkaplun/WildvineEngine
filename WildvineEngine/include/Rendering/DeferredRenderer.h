@@ -47,6 +47,7 @@ public:
 	ID3D11ShaderResourceView* getGBufferWorldAoSRV() const override { return m_gBufferWorldAoSRV.m_textureFromImg; }
 	ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const override { return m_gBufferEmissiveAlphaSRV.m_textureFromImg; }
 	void setShadowFactorDebugEnabled(bool enabled) override { m_shadowFactorDebugEnabled = enabled; }
+	void setDeferredDebugViewMode(int mode) override { m_deferredDebugViewMode = mode; }
 	const char* getDebugName() const override { return "DeferredRenderer"; }
 
 private:
@@ -140,6 +141,7 @@ private:
 		float pad1 = 0.0f;
 	} m_lightingDebugData{};
 	bool m_shadowFactorDebugEnabled = false;
+	int m_deferredDebugViewMode = 0;
 
 	std::vector<const RenderObject*> m_opaqueQueue;
 	std::vector<const RenderObject*> m_transparentQueue;

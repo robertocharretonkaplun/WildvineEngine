@@ -32,6 +32,7 @@ public:
 	ID3D11ShaderResourceView* getGBufferWorldAoSRV() const;
 	ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const;
 	void setShadowFactorDebugEnabled(bool enabled);
+	void setDeferredDebugViewMode(int mode);
 
 private:
 	HRESULT ensureRendererInitialized(RendererType rendererType, Device& device);
