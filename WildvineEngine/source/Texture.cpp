@@ -10,6 +10,7 @@
 #include "DeviceContext.h"
 #include <cstdint>
 #include <fstream>
+//#include <DDSTextureLoader.h>
 
 namespace {
 constexpr uint32_t kTextureCacheMagic = 0x58545657; // WVTX
@@ -195,22 +196,23 @@ Texture::init(Device& device,
 
 	switch (extensionType) {
 	case DDS: {
-		m_textureName = textureName + ".dds";
-
-		hr = D3DX11CreateShaderResourceViewFromFile(
-			device.m_device,
-			m_textureName.c_str(),
-			nullptr,
-			nullptr,
-			&m_textureFromImg,
-			nullptr
-		);
-
-		if (FAILED(hr)) {
-			ERROR("Texture", "init",
-				("Failed to load DDS texture. Verify filepath: " + m_textureName).c_str());
-			return hr;
-		}
+		//m_textureName = textureName + ".dds";
+        //
+		//// Conversion ASCII -> wide string (DirectXTK espera wchar_t*)
+		//std::wstring wTextureName(m_textureName.begin(), m_textureName.end());
+        //
+		//hr = DirectX::CreateDDSTextureFromFile(
+		//	device.m_device,
+		//	wTextureName.c_str(),
+		//	nullptr,
+		//	&m_textureFromImg
+		//);
+        //
+		//if (FAILED(hr)) {
+		//	ERROR("Texture", "init",
+		//		("Failed to load DDS texture. Verify filepath: " + m_textureName).c_str());
+		//	return hr;
+		//}
 		break;
 	}
 

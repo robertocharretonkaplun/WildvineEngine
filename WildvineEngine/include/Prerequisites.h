@@ -9,7 +9,8 @@
 #include <sstream>
 #include <vector>
 #include <windows.h>
-#include <xnamath.h>
+#include <DirectXMath.h>
+using namespace DirectX; // Trae XMMATRIX, XMFLOAT4X4, XMVECTOR, etc. al namespace global (como hacia el viejo xnamath.h)
 #include <thread>
 #include <memory>
 #include <unordered_map>
@@ -18,7 +19,6 @@
 
 // Librerias DirectX
 #include <d3d11.h>
-#include <d3dx11.h>
 #include <d3dcompiler.h>
 #include "Resource.h"
 #include "resource.h"
@@ -125,10 +125,10 @@ enum ShaderType {
 enum 
 ComponentType {
   NONE = 0,     ///< Tipo de componente no especificado.
-  TRANSFORM = 1,///< Componente de transformación.
+  TRANSFORM = 1,///< Componente de transformaciï¿½n.
   MESH = 2,     ///< Componente de malla.
   MATERIAL = 3,  ///< Componente de material.
-	HIERARCHY = 4 ///< Componente de jerarquía.
+	HIERARCHY = 4 ///< Componente de jerarquï¿½a.
 };
 
 

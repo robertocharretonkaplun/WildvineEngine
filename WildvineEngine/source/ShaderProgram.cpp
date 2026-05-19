@@ -181,18 +181,21 @@ ShaderProgram::CompileShaderFromFile(char* szFileName,
 	// the release configuration of this program.
 	dwShaderFlags |= D3DCOMPILE_DEBUG;
 #endif
-	ID3DBlob* pErrorBlob;
-	hr = D3DX11CompileFromFile(szFileName,
-														 nullptr,
-														 nullptr,
-														 szEntryPoint,
-														 szShaderModel,
-														 dwShaderFlags,
-														 0,
-														 nullptr,
-														 ppBlobOut,
-														 &pErrorBlob,
-														 nullptr);
+	ID3DBlob* pErrorBlob = nullptr;
+
+	// Conversion ASCII -> wide string (D3DCompileFromFile espera LPCWSTR)
+	std::string fileName(szFileName);
+	std::wstring wFileName(fileName.begin(), fileName.end());
+
+	hr = D3DCompileFromFile(wFileName.c_str(),
+													nullptr,
+													nullptr,
+													szEntryPoint,
+													szShaderModel,
+													dwShaderFlags,
+													0,
+													ppBlobOut,
+													&pErrorBlob);
 
 	if (FAILED(hr)) {
 		if (pErrorBlob) {
