@@ -14,8 +14,7 @@ class EditorViewportPass;
 
 enum class
 RendererType {
-	Forward = 0,
-	Deferred
+	Deferred = 0
 };
 
 /**

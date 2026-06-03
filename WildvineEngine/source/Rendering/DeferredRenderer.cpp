@@ -61,11 +61,16 @@ findPrimaryShadowLight(const RenderScene& scene) {
 
 void
 writeLightToFrameBuffer(CBPerFrame& buffer, int lightIndex, const LightData& light) {
-	const float range = light.range > 0.0f ? light.range : 10.0f;
+	const float range = ResolveLightRange(light);
 	const EU::Vector3 lightColor = light.color * light.intensity;
+	const float spotHalfAngle = XMConvertToRadians(ResolveSpotAngleDegrees(light)) * 0.5f;
+	const float spotOuterCos = static_cast<float>(std::cos(spotHalfAngle));
+	const float spotInnerCos = static_cast<float>(std::cos(spotHalfAngle * 0.85f));
+	const EU::Vector2 rectSize = ResolveRectLightSize(light);
 	buffer.LightPositionsRanges[lightIndex] = XMFLOAT4(light.position.x, light.position.y, light.position.z, range);
 	buffer.LightColorsTypes[lightIndex] = XMFLOAT4(lightColor.x, lightColor.y, lightColor.z, static_cast<float>(static_cast<int>(light.type)));
 	buffer.LightDirectionsIntensities[lightIndex] = XMFLOAT4(light.direction.x, light.direction.y, light.direction.z, light.intensity);
+	buffer.LightSpotRectParams[lightIndex] = XMFLOAT4(spotOuterCos, spotInnerCos, rectSize.x, rectSize.y);
 }
 }
 
@@ -265,6 +270,7 @@ DeferredRenderer::updatePerFrame(const Camera& camera,
 		m_cbPerFrame.LightPositionsRanges[lightIndex] = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 		m_cbPerFrame.LightColorsTypes[lightIndex] = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 		m_cbPerFrame.LightDirectionsIntensities[lightIndex] = XMFLOAT4(0.0f, -1.0f, 0.0f, 0.0f);
+		m_cbPerFrame.LightSpotRectParams[lightIndex] = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	if (!scene.directionalLights.empty()) {
@@ -285,7 +291,7 @@ DeferredRenderer::updatePerFrame(const Camera& camera,
 		m_cbPerFrame.LightDir = mainLight.direction;
 		m_cbPerFrame.LightColor = mainLight.color * mainLight.intensity;
 		m_cbPerFrame.LightPosition = mainLight.position;
-		m_cbPerFrame.LightRange = mainLight.range > 0.0f ? mainLight.range : 10.0f;
+		m_cbPerFrame.LightRange = ResolveLightRange(mainLight);
 		m_cbPerFrame.LightType = static_cast<int>(mainLight.type);
 	}
 

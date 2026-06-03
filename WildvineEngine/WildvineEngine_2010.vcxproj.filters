@@ -5,9 +5,6 @@
       <UniqueIdentifier>{8e114980-c1a3-4ada-ad7c-83caadf5daeb}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
-    <Filter Include="DXUT">
-      <UniqueIdentifier>{a43c5c25-0e86-4a20-b64a-883785ff74fd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{2c3d4c8c-5d1a-459a-a05a-a4e4b608a44e}</UniqueIdentifier>
       <Extensions>fx;fxh;hlsl</Extensions>
@@ -113,9 +110,6 @@
     <ClCompile Include="source\Rendering\DeferredRenderer.cpp">
       <Filter>source\Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="source\Rendering\ForwardRenderer.cpp">
-      <Filter>source\Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="source\Rendering\MaterialInstance.cpp">
       <Filter>source\Rendering</Filter>
     </ClCompile>
@@ -126,9 +120,6 @@
       <Filter>source\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui.cpp">
-      <Filter>imgui\source</Filter>
-    </ClCompile>
-    <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_demo.cpp">
       <Filter>imgui\source</Filter>
     </ClCompile>
     <ClCompile Include="Imgui\imgui-docking-znly-docking\imgui_draw.cpp">
@@ -177,9 +168,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CLInclude Include="resource.h">
+    <ClInclude Include="include\Resource.h">
       <Filter>Resource Files</Filter>
-    </CLInclude>
+    </ClInclude>
     <ResourceCompile Include="WildvineEngine.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
@@ -224,9 +215,6 @@
     </ClInclude>
     <ClInclude Include="include\IResource.h">
       <Filter>include\Patterns</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ResourceManager.h">
-      <Filter>include\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="include\ECS\Component.h">
       <Filter>include\ECS</Filter>
@@ -337,9 +325,6 @@
       <Filter>include\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="include\Rendering\DeferredRenderer.h">
-      <Filter>include\Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Rendering\ForwardRenderer.h">
       <Filter>include\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\Rendering\ISceneRenderer.h">

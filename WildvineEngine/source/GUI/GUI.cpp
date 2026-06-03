@@ -17,6 +17,8 @@
 #include "Rendering\MaterialInstance.h"
 #include "Texture.h"
 #include "EngineUtilities\Utilities\Camera.h"
+#include <cmath>
+#include <cstdio>
 //#include "imgui_internal.h"
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::LOCAL);
@@ -53,6 +55,329 @@ float RadToDeg(float radians) {
 
 float DegToRad(float degrees) {
 	return XMConvertToRadians(degrees);
+}
+
+float Clamp01(float value) {
+	if (value < 0.0f) {
+		return 0.0f;
+	}
+	return value > 1.0f ? 1.0f : value;
+}
+
+int ToColorByte(float value) {
+	return static_cast<int>(Clamp01(value) * 255.0f + 0.5f);
+}
+
+ImU32 LightInfluenceColor(const LightData& light, int alpha) {
+	const float energy = CalculatePointLightEnergy(light);
+	if (energy <= 0.0f) {
+		return IM_COL32(255, 214, 92, alpha);
+	}
+
+	return IM_COL32(
+		ToColorByte(light.color.x),
+		ToColorByte(light.color.y),
+		ToColorByte(light.color.z),
+		alpha);
+}
+
+bool ProjectWorldPointToViewport(const EU::Vector3& point,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	ImVec2& outScreen)
+{
+	XMVECTOR worldPos = XMVectorSet(point.x, point.y, point.z, 1.0f);
+	XMVECTOR projected = XMVector3Project(worldPos,
+		viewportPos.x,
+		viewportPos.y,
+		viewportSize.x,
+		viewportSize.y,
+		0.0f,
+		1.0f,
+		camera.getProj(),
+		camera.getView(),
+		XMMatrixIdentity());
+
+	const float screenX = XMVectorGetX(projected);
+	const float screenY = XMVectorGetY(projected);
+	const float screenZ = XMVectorGetZ(projected);
+	constexpr float kMaxProjectedCoordinate = 10000000.0f;
+	if (screenZ < 0.0f || screenZ > 1.0f ||
+		screenX != screenX || screenY != screenY ||
+		screenX < -kMaxProjectedCoordinate || screenX > kMaxProjectedCoordinate ||
+		screenY < -kMaxProjectedCoordinate || screenY > kMaxProjectedCoordinate) {
+		return false;
+	}
+
+	outScreen = ImVec2(screenX, screenY);
+	return true;
+}
+
+EU::Vector3 PointLightRingPoint(const EU::Vector3& center, float radius, int plane, float angle) {
+	const float c = static_cast<float>(std::cos(angle));
+	const float s = static_cast<float>(std::sin(angle));
+
+	switch (plane) {
+	case 0:
+		return EU::Vector3(center.x + c * radius, center.y + s * radius, center.z);
+	case 1:
+		return EU::Vector3(center.x + c * radius, center.y, center.z + s * radius);
+	default:
+		return EU::Vector3(center.x, center.y + c * radius, center.z + s * radius);
+	}
+}
+
+EU::Vector3 ToVector3(XMVECTOR value) {
+	return EU::Vector3(XMVectorGetX(value), XMVectorGetY(value), XMVectorGetZ(value));
+}
+
+EU::Vector3 LightDirectionFromTransform(const EU::TSharedPointer<Transform>& transform) {
+	if (transform.isNull()) {
+		return EU::Vector3(0.0f, -1.0f, 0.0f);
+	}
+
+	XMVECTOR localLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+	XMVECTOR worldLightDirection = XMVector3Normalize(XMVector3TransformNormal(localLightDirection, transform->worldMatrix));
+	return ToVector3(worldLightDirection);
+}
+
+void BuildLightBasis(const EU::Vector3& direction, EU::Vector3& right, EU::Vector3& up) {
+	XMVECTOR directionVector = XMVectorSet(direction.x, direction.y, direction.z, 0.0f);
+	if (XMVectorGetX(XMVector3LengthSq(directionVector)) <= 0.000001f) {
+		directionVector = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+	}
+	else {
+		directionVector = XMVector3Normalize(directionVector);
+	}
+
+	const float yAbs = static_cast<float>(std::fabs(XMVectorGetY(directionVector)));
+	XMVECTOR referenceUp = yAbs > 0.92f ? XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f) : XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR rightVector = XMVector3Normalize(XMVector3Cross(referenceUp, directionVector));
+	XMVECTOR upVector = XMVector3Normalize(XMVector3Cross(directionVector, rightVector));
+	right = ToVector3(rightVector);
+	up = ToVector3(upVector);
+}
+
+EU::Vector3 AddScaled(const EU::Vector3& origin, const EU::Vector3& axis, float scale) {
+	return EU::Vector3(
+		origin.x + axis.x * scale,
+		origin.y + axis.y * scale,
+		origin.z + axis.z * scale);
+}
+
+EU::Vector3 AddScaled2(const EU::Vector3& origin,
+	const EU::Vector3& axisA,
+	float scaleA,
+	const EU::Vector3& axisB,
+	float scaleB)
+{
+	return EU::Vector3(
+		origin.x + axisA.x * scaleA + axisB.x * scaleB,
+		origin.y + axisA.y * scaleA + axisB.y * scaleB,
+		origin.z + axisA.z * scaleA + axisB.z * scaleB);
+}
+
+bool DrawProjectedLine(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& start,
+	const EU::Vector3& end,
+	ImU32 color,
+	float thickness)
+{
+	ImVec2 startScreen;
+	ImVec2 endScreen;
+	if (!ProjectWorldPointToViewport(start, camera, viewportPos, viewportSize, startScreen) ||
+		!ProjectWorldPointToViewport(end, camera, viewportPos, viewportSize, endScreen)) {
+		return false;
+	}
+
+	drawList->AddLine(startScreen, endScreen, color, thickness);
+	return true;
+}
+
+void DrawProjectedLightRing(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& center,
+	float radius,
+	int plane,
+	ImU32 color,
+	float thickness)
+{
+	constexpr int kSegments = 96;
+	constexpr float kTwoPi = 6.28318530718f;
+	ImVec2 previous;
+	bool hasPrevious = false;
+
+	for (int segment = 0; segment <= kSegments; ++segment) {
+		const float angle = (static_cast<float>(segment) / static_cast<float>(kSegments)) * kTwoPi;
+		ImVec2 current;
+		const bool visible = ProjectWorldPointToViewport(
+			PointLightRingPoint(center, radius, plane, angle),
+			camera,
+			viewportPos,
+			viewportSize,
+			current);
+
+		if (hasPrevious && visible) {
+			drawList->AddLine(previous, current, color, thickness);
+		}
+
+		previous = current;
+		hasPrevious = visible;
+	}
+}
+
+void DrawProjectedBasisRing(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& center,
+	const EU::Vector3& right,
+	const EU::Vector3& up,
+	float radius,
+	ImU32 color,
+	float thickness)
+{
+	constexpr int kSegments = 96;
+	constexpr float kTwoPi = 6.28318530718f;
+	ImVec2 previous;
+	bool hasPrevious = false;
+
+	for (int segment = 0; segment <= kSegments; ++segment) {
+		const float angle = (static_cast<float>(segment) / static_cast<float>(kSegments)) * kTwoPi;
+		const float c = static_cast<float>(std::cos(angle));
+		const float s = static_cast<float>(std::sin(angle));
+		ImVec2 current;
+		const bool visible = ProjectWorldPointToViewport(
+			AddScaled2(center, right, c * radius, up, s * radius),
+			camera,
+			viewportPos,
+			viewportSize,
+			current);
+
+		if (hasPrevious && visible) {
+			drawList->AddLine(previous, current, color, thickness);
+		}
+
+		previous = current;
+		hasPrevious = visible;
+	}
+}
+
+void DrawPointLightInfluence(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& center,
+	const LightData& light,
+	bool selected)
+{
+	const float radius = CalculatePointLightInfluenceRadius(light);
+	if (radius <= 0.0f) {
+		return;
+	}
+
+	const int alpha = selected ? 150 : 82;
+	const float thickness = selected ? 2.2f : 1.25f;
+	const ImU32 color = LightInfluenceColor(light, alpha);
+
+	for (int plane = 0; plane < 3; ++plane) {
+		DrawProjectedLightRing(drawList, camera, viewportPos, viewportSize, center, radius, plane, color, thickness);
+	}
+}
+
+void DrawSpotLightInfluence(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& center,
+	const LightData& light,
+	bool selected)
+{
+	const float range = CalculateLocalLightInfluenceRadius(light);
+	if (range <= 0.0f) {
+		return;
+	}
+
+	EU::Vector3 direction = light.direction.normalize();
+	if (direction.magnitude() <= 0.0001f) {
+		direction = EU::Vector3(0.0f, -1.0f, 0.0f);
+	}
+
+	EU::Vector3 right;
+	EU::Vector3 up;
+	BuildLightBasis(direction, right, up);
+	const float halfAngle = XMConvertToRadians(ResolveSpotAngleDegrees(light)) * 0.5f;
+	const float baseRadius = static_cast<float>(std::tan(halfAngle)) * range;
+	const EU::Vector3 baseCenter = AddScaled(center, direction, range);
+	const int alpha = selected ? 170 : 95;
+	const float thickness = selected ? 2.3f : 1.3f;
+	const ImU32 color = LightInfluenceColor(light, alpha);
+
+	DrawProjectedBasisRing(drawList, camera, viewportPos, viewportSize, baseCenter, right, up, baseRadius, color, thickness);
+	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, right, baseRadius), color, thickness);
+	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, right, -baseRadius), color, thickness);
+	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, up, baseRadius), color, thickness);
+	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, up, -baseRadius), color, thickness);
+}
+
+void DrawRectLightInfluence(ImDrawList* drawList,
+	Camera& camera,
+	const ImVec2& viewportPos,
+	const ImVec2& viewportSize,
+	const EU::Vector3& center,
+	const LightData& light,
+	bool selected)
+{
+	const float range = CalculateLocalLightInfluenceRadius(light);
+	EU::Vector3 direction = light.direction.normalize();
+	if (direction.magnitude() <= 0.0001f) {
+		direction = EU::Vector3(0.0f, -1.0f, 0.0f);
+	}
+
+	EU::Vector3 right;
+	EU::Vector3 up;
+	BuildLightBasis(direction, right, up);
+	const EU::Vector2 size = ResolveRectLightSize(light);
+	const float halfWidth = size.x * 0.5f;
+	const float halfHeight = size.y * 0.5f;
+	const int alpha = selected ? 170 : 95;
+	const float thickness = selected ? 2.3f : 1.3f;
+	const ImU32 color = LightInfluenceColor(light, alpha);
+
+	const EU::Vector3 corners[4] = {
+		AddScaled2(center, right, -halfWidth, up, -halfHeight),
+		AddScaled2(center, right, halfWidth, up, -halfHeight),
+		AddScaled2(center, right, halfWidth, up, halfHeight),
+		AddScaled2(center, right, -halfWidth, up, halfHeight)
+	};
+
+	for (int i = 0; i < 4; ++i) {
+		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, corners[i], corners[(i + 1) % 4], color, thickness);
+	}
+
+	if (range <= 0.0f) {
+		return;
+	}
+
+	const EU::Vector3 farCenter = AddScaled(center, direction, range);
+	const EU::Vector3 farCorners[4] = {
+		AddScaled2(farCenter, right, -halfWidth, up, -halfHeight),
+		AddScaled2(farCenter, right, halfWidth, up, -halfHeight),
+		AddScaled2(farCenter, right, halfWidth, up, halfHeight),
+		AddScaled2(farCenter, right, -halfWidth, up, halfHeight)
+	};
+
+	const ImU32 rangeColor = LightInfluenceColor(light, selected ? 115 : 62);
+	for (int i = 0; i < 4; ++i) {
+		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, farCorners[i], farCorners[(i + 1) % 4], rangeColor, thickness);
+		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, corners[i], farCorners[i], rangeColor, thickness * 0.85f);
+	}
 }
 
 void DrawDebugTextureEntry(const DebugTextureItem& item, int index, int& selectedView, float thumbnailHeight) {
@@ -277,6 +602,7 @@ const char* GetLightTypeLabel(LightType type) {
 	case LightType::Directional: return "Directional";
 	case LightType::Point: return "Point";
 	case LightType::Spot: return "Spot";
+	case LightType::Rect: return "Rect";
 	default: return "Unknown";
 	}
 }
@@ -812,17 +1138,26 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 
 	if (hasLightComponent && BeginInspectorSection("Light")) {
 		LightData& light = lightComponent->getLightData();
+		if (light.type == LightType::Spot && light.spotAngle <= 0.0f) {
+			light.spotAngle = 45.0f;
+		}
+		if (light.type == LightType::Rect) {
+			light.rectSize = ResolveRectLightSize(light);
+		}
 		if (BeginInspectorPropertyTable("##LightProperties")) {
-			static const char* kLightTypes[] = { "Directional", "Point" };
+			static const char* kLightTypes[] = { "Directional", "Point", "Spot", "Rect" };
 			int currentLightType = static_cast<int>(light.type);
-			if (currentLightType > static_cast<int>(LightType::Point)) {
+			if (currentLightType > static_cast<int>(LightType::Rect)) {
 				currentLightType = static_cast<int>(LightType::Point);
 			}
 			DrawPropertyLabel("Type");
 			if (ImGui::Combo("##LightType", &currentLightType, kLightTypes, IM_ARRAYSIZE(kLightTypes))) {
 				light.type = static_cast<LightType>(currentLightType);
-				if (light.type == LightType::Point && light.range <= 0.0f) {
-					light.range = 12.0f;
+				if (light.type == LightType::Spot && light.spotAngle <= 0.0f) {
+					light.spotAngle = 45.0f;
+				}
+				if (light.type == LightType::Rect) {
+					light.rectSize = ResolveRectLightSize(light);
 				}
 			}
 			bool castShadow = lightComponent->canCastShadow();
@@ -835,10 +1170,19 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 			if (light.type == LightType::Spot) {
 				DrawPropertyLabel("Direction");
 				ImGui::SliderFloat3("##LightDirection", &light.direction.x, -1.0f, 1.0f);
+				DrawPropertyLabel("Spot Angle");
+				ImGui::SliderFloat("##SpotAngle", &light.spotAngle, 1.0f, 120.0f);
 			}
-			if (light.type == LightType::Point || light.type == LightType::Spot) {
-				DrawPropertyLabel("Range");
+			if (light.type == LightType::Rect) {
+				DrawPropertyLabel("Size");
+				ImGui::DragFloat2("##RectSize", &light.rectSize.x, 0.1f, 0.1f, 50.0f);
+			}
+			if (light.type == LightType::Point || light.type == LightType::Spot || light.type == LightType::Rect) {
+				DrawPropertyLabel("Range Override");
 				ImGui::SliderFloat("##LightRange", &light.range, 0.0f, 100.0f);
+				char radiusText[32];
+				sprintf_s(radiusText, sizeof(radiusText), "%.2f", CalculateLocalLightInfluenceRadius(light));
+				DrawPropertyValueText("Effective Radius", radiusText);
 			}
 			ImGui::EndTable();
 		}
@@ -1388,7 +1732,7 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
 
 		ImDrawList* gizmoDrawList = m_viewportDrawList;
 		m_viewportDrawList = ImGui::GetForegroundDrawList();
-		drawLightIcons(actors, camera, lightIconSRV);
+		drawLightIcons(actors, camera, selectedActor, lightIconSRV);
 		m_viewportDrawList = gizmoDrawList;
 		editTransform(camera, window, selectedActor);
 	}
@@ -1399,6 +1743,7 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
 
 void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 	Camera& camera,
+	EU::TSharedPointer<Actor> selectedActor,
 	ID3D11ShaderResourceView* lightIconSRV)
 {
 	if (!m_viewportDrawList || m_viewportSize.x <= 1.0f || m_viewportSize.y <= 1.0f) {
@@ -1406,9 +1751,17 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 	}
 
 	const ImVec2 iconSize(26.0f, 26.0f);
+	const ImVec2 clipMax(m_viewportPos.x + m_viewportSize.x, m_viewportPos.y + m_viewportSize.y);
+
+	m_viewportDrawList->PushClipRect(m_viewportPos, clipMax, true);
 
 	for (const auto& actor : actors) {
-		if (actor.isNull() || actor->getComponent<LightComponent>().isNull()) {
+		if (actor.isNull()) {
+			continue;
+		}
+
+		auto lightComponent = actor->getComponent<LightComponent>();
+		if (lightComponent.isNull()) {
 			continue;
 		}
 
@@ -1418,26 +1771,24 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 		}
 
 		const EU::Vector3& position = transform->getPosition();
-		XMVECTOR worldPos = XMVectorSet(position.x, position.y, position.z, 1.0f);
-		XMVECTOR projected = XMVector3Project(worldPos,
-			m_viewportPos.x,
-			m_viewportPos.y,
-			m_viewportSize.x,
-			m_viewportSize.y,
-			0.0f,
-			1.0f,
-			camera.getProj(),
-			camera.getView(),
-			XMMatrixIdentity());
-
-		const float screenX = XMVectorGetX(projected);
-		const float screenY = XMVectorGetY(projected);
-		const float screenZ = XMVectorGetZ(projected);
-		if (screenZ < 0.0f || screenZ > 1.0f) {
-			continue;
+		const LightData& light = lightComponent->getLightData();
+		LightData visualLight = light;
+		visualLight.direction = LightDirectionFromTransform(transform);
+		const bool selected = !selectedActor.isNull() && selectedActor.get() == actor.get();
+		if (visualLight.type == LightType::Point) {
+			DrawPointLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
+		}
+		else if (visualLight.type == LightType::Spot) {
+			DrawSpotLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
+		}
+		else if (visualLight.type == LightType::Rect) {
+			DrawRectLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
 		}
 
-		ImVec2 center(screenX, screenY);
+		ImVec2 center;
+		if (!ProjectWorldPointToViewport(position, camera, m_viewportPos, m_viewportSize, center)) {
+			continue;
+		}
 
 		if (center.x < m_viewportPos.x || center.x > m_viewportPos.x + m_viewportSize.x ||
 			center.y < m_viewportPos.y || center.y > m_viewportPos.y + m_viewportSize.y) {
@@ -1455,6 +1806,8 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 			m_viewportDrawList->AddCircle(center, 11.0f, IM_COL32(255, 248, 214, 255), 16, 2.0f);
 		}
 	}
+
+	m_viewportDrawList->PopClipRect();
 }
 
 void GUI::drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,

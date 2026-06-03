@@ -4,7 +4,6 @@
  * @ingroup core
  */
 #include "BaseApp.h"
-#include "ResourceManager.h"
 #include <algorithm>
 #include <cctype>
 #include <fstream>
@@ -665,7 +664,7 @@ BaseApp::init() {
 		return hr;
 	}
 
-	hr = m_renderPipeline.init(m_device, RendererType::Deferred);
+	hr = m_renderPipeline.init(m_device);
 	if (FAILED(hr)) {
 		ERROR("Main", "InitDevice",
 			("Failed to initialize RenderPipeline. HRESULT: " + std::to_string(hr)).c_str());
@@ -1012,7 +1011,7 @@ EU::TSharedPointer<Actor> BaseApp::createLightActor(const std::string& name)
 	lightComponent->getLightData().direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
 	lightComponent->getLightData().color = EU::Vector3(1.0f, 1.0f, 1.0f);
 	lightComponent->getLightData().intensity = 1.0f;
-	lightComponent->getLightData().range = 12.0f;
+	lightComponent->getLightData().range = 0.0f;
 	lightComponent->setCastShadow(false);
 
 	EU::TSharedPointer<Transform> transform = lightActor->getComponent<Transform>();
@@ -1036,7 +1035,7 @@ bool BaseApp::saveScene(const std::string& path)
 		return false;
 	}
 
-	stream << "WVSCENE 1\n";
+	stream << "WVSCENE 2\n";
 	stream << "ACTOR_COUNT " << m_actors.size() << "\n";
 
 	for (size_t actorIndex = 0; actorIndex < m_actors.size(); ++actorIndex) {
@@ -1105,6 +1104,8 @@ bool BaseApp::saveScene(const std::string& path)
 				<< light.direction.z << " "
 				<< light.range << " "
 				<< light.spotAngle << " "
+				<< light.rectSize.x << " "
+				<< light.rectSize.y << " "
 				<< (lightComponent->canCastShadow() ? 1 : 0) << "\n";
 		}
 
@@ -1140,7 +1141,7 @@ bool BaseApp::loadScene(const std::string& path)
 
 	int version = 0;
 	stream >> version;
-	if (version != 1) {
+	if (version < 1 || version > 2) {
 		return false;
 	}
 
@@ -1262,13 +1263,24 @@ bool BaseApp::loadScene(const std::string& path)
 				>> light.direction.y
 				>> light.direction.z
 				>> light.range
-				>> light.spotAngle
-				>> castShadow;
+				>> light.spotAngle;
 
-			if (type < static_cast<int>(LightType::Directional) || type > static_cast<int>(LightType::Spot)) {
+			if (version >= 2) {
+				stream >> light.rectSize.x
+					>> light.rectSize.y;
+			}
+			stream >> castShadow;
+
+			if (type < static_cast<int>(LightType::Directional) || type > static_cast<int>(LightType::Rect)) {
 				type = static_cast<int>(LightType::Point);
 			}
 			light.type = static_cast<LightType>(type);
+			if (light.type == LightType::Spot && light.spotAngle <= 0.0f) {
+				light.spotAngle = 45.0f;
+			}
+			if (light.type == LightType::Rect) {
+				light.rectSize = ResolveRectLightSize(light);
+			}
 
 			EU::TSharedPointer<LightComponent> lightComponent = currentActor->getComponent<LightComponent>();
 			if (!lightComponent) {

@@ -112,6 +112,7 @@ public:
 
   void drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
                       Camera& camera,
+                      EU::TSharedPointer<Actor> selectedActor,
                       ID3D11ShaderResourceView* lightIconSRV);
 
   void drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,

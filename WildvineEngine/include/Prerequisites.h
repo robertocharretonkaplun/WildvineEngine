@@ -21,7 +21,6 @@ using namespace DirectX; // Trae XMMATRIX, XMFLOAT4X4, XMVECTOR, etc. al namespa
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include "Resource.h"
-#include "resource.h"
 
 // Third Party Libraries
 #include "EngineUtilities/Vectors/Vector2.h"

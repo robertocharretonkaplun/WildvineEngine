@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Prerequisites.h"
+#include <cmath>
 
 class Mesh;
 class MaterialInstance;
@@ -37,10 +38,13 @@ enum class
 LightType {
 	Directional = 0,
 	Point,
-	Spot
+	Spot,
+	Rect
 };
 
 constexpr int kMaxSceneLights = 8;
+constexpr float kDefaultPointLightRange = 10.0f;
+constexpr float kPointLightVisibilityThreshold = 0.01f;
 
 struct
 LightData {
@@ -53,7 +57,61 @@ LightData {
 
 	EU::Vector3 position = EU::Vector3(0.0f, 0.0f, 0.0f);
 	float spotAngle = 0.0f;
+
+	EU::Vector2 rectSize = EU::Vector2(2.0f, 2.0f);
 };
+
+inline float
+CalculatePointLightEnergy(const LightData& light) {
+	const float red = light.color.x > 0.0f ? light.color.x : 0.0f;
+	const float green = light.color.y > 0.0f ? light.color.y : 0.0f;
+	const float blue = light.color.z > 0.0f ? light.color.z : 0.0f;
+	const float maxChannel = red > green ? (red > blue ? red : blue) : (green > blue ? green : blue);
+	const float intensity = light.intensity > 0.0f ? light.intensity : 0.0f;
+	return maxChannel * intensity;
+}
+
+inline float
+CalculateLocalLightInfluenceRadius(const LightData& light) {
+	if (light.range > 0.0f) {
+		return light.range;
+	}
+
+	const float energy = CalculatePointLightEnergy(light);
+	if (energy <= 0.0f) {
+		return 0.0f;
+	}
+
+	return static_cast<float>(std::sqrt(energy / kPointLightVisibilityThreshold));
+}
+
+inline float
+CalculatePointLightInfluenceRadius(const LightData& light) {
+	return CalculateLocalLightInfluenceRadius(light);
+}
+
+inline float
+ResolveLightRange(const LightData& light) {
+	if (light.type == LightType::Point ||
+		light.type == LightType::Spot ||
+		light.type == LightType::Rect) {
+		return CalculateLocalLightInfluenceRadius(light);
+	}
+
+	return light.range > 0.0f ? light.range : kDefaultPointLightRange;
+}
+
+inline float
+ResolveSpotAngleDegrees(const LightData& light) {
+	return light.spotAngle > 0.0f ? light.spotAngle : 45.0f;
+}
+
+inline EU::Vector2
+ResolveRectLightSize(const LightData& light) {
+	const float width = light.rectSize.x > 0.0f ? light.rectSize.x : 2.0f;
+	const float height = light.rectSize.y > 0.0f ? light.rectSize.y : 2.0f;
+	return EU::Vector2(width, height);
+}
 
 struct
 MaterialParams {
@@ -82,6 +140,7 @@ CBPerFrame {
 	XMFLOAT4 LightPositionsRanges[kMaxSceneLights]{};
 	XMFLOAT4 LightColorsTypes[kMaxSceneLights]{};
 	XMFLOAT4 LightDirectionsIntensities[kMaxSceneLights]{};
+	XMFLOAT4 LightSpotRectParams[kMaxSceneLights]{};
 	int LightCount = 0;
 	XMFLOAT3 pad2 = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };

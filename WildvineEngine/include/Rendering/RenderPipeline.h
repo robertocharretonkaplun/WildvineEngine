@@ -4,7 +4,6 @@
  * @ingroup rendering
  */
 #pragma once
-#include "Rendering/ForwardRenderer.h"
 #include "Rendering/DeferredRenderer.h"
 
 /**
@@ -14,7 +13,7 @@
 class
 RenderPipeline {
 public:
-	HRESULT init(Device& device, RendererType initialRenderer = RendererType::Deferred);
+	HRESULT init(Device& device);
 	HRESULT setRendererType(RendererType rendererType, Device& device);
 	void resize(Device& device, unsigned int width, unsigned int height);
 	void render(DeviceContext& deviceContext,
@@ -23,7 +22,7 @@ public:
 		EditorViewportPass& viewportPass);
 	void destroy();
 
-	RendererType getRendererType() const { return m_activeRendererType; }
+	RendererType getRendererType() const { return RendererType::Deferred; }
 	const char* getActiveRendererName() const;
 	ID3D11ShaderResourceView* getShadowMapSRV() const;
 	ID3D11ShaderResourceView* getPreShadowSRV() const;
@@ -35,15 +34,7 @@ public:
 	void setDeferredDebugViewMode(int mode);
 
 private:
-	HRESULT ensureRendererInitialized(RendererType rendererType, Device& device);
-	ISceneRenderer* resolveRenderer(RendererType rendererType);
-	const ISceneRenderer* resolveRenderer(RendererType rendererType) const;
-
-private:
-	ForwardRenderer m_forwardRenderer;
+	HRESULT ensureDeferredInitialized(Device& device);
 	DeferredRenderer m_deferredRenderer;
-	ISceneRenderer* m_activeRenderer = nullptr;
-	RendererType m_activeRendererType = RendererType::Deferred;
-	bool m_forwardInitialized = false;
 	bool m_deferredInitialized = false;
 };
