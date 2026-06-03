@@ -32,23 +32,47 @@ class Material;
 class
 DeferredRenderer : public ISceneRenderer {
 public:
-	HRESULT init(Device& device) override;
-	void resize(Device& device, unsigned int width, unsigned int height) override;
-	void render(DeviceContext& deviceContext,
-		const Camera& camera,
-		RenderScene& scene,
-		EditorViewportPass& viewportPass) override;
-	void destroy() override;
+	HRESULT 
+	init(Device& device) override;
+	
+	void 
+	resize(Device& device, unsigned int width, unsigned int height) override;
+	
+	void 
+	render(DeviceContext& deviceContext,
+				 const Camera& camera,
+				 RenderScene& scene,
+				 EditorViewportPass& viewportPass) override;
 
-	ID3D11ShaderResourceView* getShadowMapSRV() const override { return m_shadowDepthSRV.m_textureFromImg; }
-	ID3D11ShaderResourceView* getPreShadowSRV() const override { return m_preShadowDebugPass.getSRV(); }
-	ID3D11ShaderResourceView* getGBufferAlbedoMetallicSRV() const override { return m_gBufferAlbedoMetallicSRV.m_textureFromImg; }
-	ID3D11ShaderResourceView* getGBufferNormalRoughnessSRV() const override { return m_gBufferNormalRoughnessSRV.m_textureFromImg; }
-	ID3D11ShaderResourceView* getGBufferWorldAoSRV() const override { return m_gBufferWorldAoSRV.m_textureFromImg; }
-	ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const override { return m_gBufferEmissiveAlphaSRV.m_textureFromImg; }
-	void setShadowFactorDebugEnabled(bool enabled) override { m_shadowFactorDebugEnabled = enabled; }
-	void setDeferredDebugViewMode(int mode) override { m_deferredDebugViewMode = mode; }
-	const char* getDebugName() const override { return "DeferredRenderer"; }
+	void 
+	destroy() override;
+
+	ID3D11ShaderResourceView* 
+	getShadowMapSRV() const override { return m_shadowDepthSRV.m_textureFromImg; }
+
+	ID3D11ShaderResourceView* 
+	getPreShadowSRV() const override { return m_preShadowDebugPass.getSRV(); }
+
+	ID3D11ShaderResourceView* 
+	getGBufferAlbedoMetallicSRV() const override { return m_gBufferAlbedoMetallicSRV.m_textureFromImg; }
+
+	ID3D11ShaderResourceView* 
+	getGBufferNormalRoughnessSRV() const override { return m_gBufferNormalRoughnessSRV.m_textureFromImg; }
+
+	ID3D11ShaderResourceView* 
+	getGBufferWorldAoSRV() const override { return m_gBufferWorldAoSRV.m_textureFromImg; }
+
+	ID3D11ShaderResourceView* 
+	getGBufferEmissiveAlphaSRV() const override { return m_gBufferEmissiveAlphaSRV.m_textureFromImg; }
+
+	void 
+	setShadowFactorDebugEnabled(bool enabled) override { m_shadowFactorDebugEnabled = enabled; }
+
+	void 
+	setDeferredDebugViewMode(int mode) override { m_deferredDebugViewMode = mode; }
+	
+	const char* 
+	getDebugName() const override { return "DeferredRenderer"; }
 
 private:
 	void buildQueues(RenderScene& scene, const Camera& camera);
