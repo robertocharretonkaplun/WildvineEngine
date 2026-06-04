@@ -57,30 +57,6 @@ float DegToRad(float degrees) {
 	return XMConvertToRadians(degrees);
 }
 
-float Clamp01(float value) {
-	if (value < 0.0f) {
-		return 0.0f;
-	}
-	return value > 1.0f ? 1.0f : value;
-}
-
-int ToColorByte(float value) {
-	return static_cast<int>(Clamp01(value) * 255.0f + 0.5f);
-}
-
-ImU32 LightInfluenceColor(const LightData& light, int alpha) {
-	const float energy = CalculatePointLightEnergy(light);
-	if (energy <= 0.0f) {
-		return IM_COL32(255, 214, 92, alpha);
-	}
-
-	return IM_COL32(
-		ToColorByte(light.color.x),
-		ToColorByte(light.color.y),
-		ToColorByte(light.color.z),
-		alpha);
-}
-
 bool ProjectWorldPointToViewport(const EU::Vector3& point,
 	Camera& camera,
 	const ImVec2& viewportPos,
@@ -112,272 +88,6 @@ bool ProjectWorldPointToViewport(const EU::Vector3& point,
 
 	outScreen = ImVec2(screenX, screenY);
 	return true;
-}
-
-EU::Vector3 PointLightRingPoint(const EU::Vector3& center, float radius, int plane, float angle) {
-	const float c = static_cast<float>(std::cos(angle));
-	const float s = static_cast<float>(std::sin(angle));
-
-	switch (plane) {
-	case 0:
-		return EU::Vector3(center.x + c * radius, center.y + s * radius, center.z);
-	case 1:
-		return EU::Vector3(center.x + c * radius, center.y, center.z + s * radius);
-	default:
-		return EU::Vector3(center.x, center.y + c * radius, center.z + s * radius);
-	}
-}
-
-EU::Vector3 ToVector3(XMVECTOR value) {
-	return EU::Vector3(XMVectorGetX(value), XMVectorGetY(value), XMVectorGetZ(value));
-}
-
-EU::Vector3 LightDirectionFromTransform(const EU::TSharedPointer<Transform>& transform) {
-	if (transform.isNull()) {
-		return EU::Vector3(0.0f, -1.0f, 0.0f);
-	}
-
-	XMVECTOR localLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
-	XMVECTOR worldLightDirection = XMVector3Normalize(XMVector3TransformNormal(localLightDirection, transform->worldMatrix));
-	return ToVector3(worldLightDirection);
-}
-
-void BuildLightBasis(const EU::Vector3& direction, EU::Vector3& right, EU::Vector3& up) {
-	XMVECTOR directionVector = XMVectorSet(direction.x, direction.y, direction.z, 0.0f);
-	if (XMVectorGetX(XMVector3LengthSq(directionVector)) <= 0.000001f) {
-		directionVector = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
-	}
-	else {
-		directionVector = XMVector3Normalize(directionVector);
-	}
-
-	const float yAbs = static_cast<float>(std::fabs(XMVectorGetY(directionVector)));
-	XMVECTOR referenceUp = yAbs > 0.92f ? XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f) : XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMVECTOR rightVector = XMVector3Normalize(XMVector3Cross(referenceUp, directionVector));
-	XMVECTOR upVector = XMVector3Normalize(XMVector3Cross(directionVector, rightVector));
-	right = ToVector3(rightVector);
-	up = ToVector3(upVector);
-}
-
-EU::Vector3 AddScaled(const EU::Vector3& origin, const EU::Vector3& axis, float scale) {
-	return EU::Vector3(
-		origin.x + axis.x * scale,
-		origin.y + axis.y * scale,
-		origin.z + axis.z * scale);
-}
-
-EU::Vector3 AddScaled2(const EU::Vector3& origin,
-	const EU::Vector3& axisA,
-	float scaleA,
-	const EU::Vector3& axisB,
-	float scaleB)
-{
-	return EU::Vector3(
-		origin.x + axisA.x * scaleA + axisB.x * scaleB,
-		origin.y + axisA.y * scaleA + axisB.y * scaleB,
-		origin.z + axisA.z * scaleA + axisB.z * scaleB);
-}
-
-bool DrawProjectedLine(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& start,
-	const EU::Vector3& end,
-	ImU32 color,
-	float thickness)
-{
-	ImVec2 startScreen;
-	ImVec2 endScreen;
-	if (!ProjectWorldPointToViewport(start, camera, viewportPos, viewportSize, startScreen) ||
-		!ProjectWorldPointToViewport(end, camera, viewportPos, viewportSize, endScreen)) {
-		return false;
-	}
-
-	drawList->AddLine(startScreen, endScreen, color, thickness);
-	return true;
-}
-
-void DrawProjectedLightRing(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& center,
-	float radius,
-	int plane,
-	ImU32 color,
-	float thickness)
-{
-	constexpr int kSegments = 96;
-	constexpr float kTwoPi = 6.28318530718f;
-	ImVec2 previous;
-	bool hasPrevious = false;
-
-	for (int segment = 0; segment <= kSegments; ++segment) {
-		const float angle = (static_cast<float>(segment) / static_cast<float>(kSegments)) * kTwoPi;
-		ImVec2 current;
-		const bool visible = ProjectWorldPointToViewport(
-			PointLightRingPoint(center, radius, plane, angle),
-			camera,
-			viewportPos,
-			viewportSize,
-			current);
-
-		if (hasPrevious && visible) {
-			drawList->AddLine(previous, current, color, thickness);
-		}
-
-		previous = current;
-		hasPrevious = visible;
-	}
-}
-
-void DrawProjectedBasisRing(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& center,
-	const EU::Vector3& right,
-	const EU::Vector3& up,
-	float radius,
-	ImU32 color,
-	float thickness)
-{
-	constexpr int kSegments = 96;
-	constexpr float kTwoPi = 6.28318530718f;
-	ImVec2 previous;
-	bool hasPrevious = false;
-
-	for (int segment = 0; segment <= kSegments; ++segment) {
-		const float angle = (static_cast<float>(segment) / static_cast<float>(kSegments)) * kTwoPi;
-		const float c = static_cast<float>(std::cos(angle));
-		const float s = static_cast<float>(std::sin(angle));
-		ImVec2 current;
-		const bool visible = ProjectWorldPointToViewport(
-			AddScaled2(center, right, c * radius, up, s * radius),
-			camera,
-			viewportPos,
-			viewportSize,
-			current);
-
-		if (hasPrevious && visible) {
-			drawList->AddLine(previous, current, color, thickness);
-		}
-
-		previous = current;
-		hasPrevious = visible;
-	}
-}
-
-void DrawPointLightInfluence(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& center,
-	const LightData& light,
-	bool selected)
-{
-	const float radius = CalculatePointLightInfluenceRadius(light);
-	if (radius <= 0.0f) {
-		return;
-	}
-
-	const int alpha = selected ? 150 : 82;
-	const float thickness = selected ? 2.2f : 1.25f;
-	const ImU32 color = LightInfluenceColor(light, alpha);
-
-	for (int plane = 0; plane < 3; ++plane) {
-		DrawProjectedLightRing(drawList, camera, viewportPos, viewportSize, center, radius, plane, color, thickness);
-	}
-}
-
-void DrawSpotLightInfluence(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& center,
-	const LightData& light,
-	bool selected)
-{
-	const float range = CalculateLocalLightInfluenceRadius(light);
-	if (range <= 0.0f) {
-		return;
-	}
-
-	EU::Vector3 direction = light.direction.normalize();
-	if (direction.magnitude() <= 0.0001f) {
-		direction = EU::Vector3(0.0f, -1.0f, 0.0f);
-	}
-
-	EU::Vector3 right;
-	EU::Vector3 up;
-	BuildLightBasis(direction, right, up);
-	const float halfAngle = XMConvertToRadians(ResolveSpotAngleDegrees(light)) * 0.5f;
-	const float baseRadius = static_cast<float>(std::tan(halfAngle)) * range;
-	const EU::Vector3 baseCenter = AddScaled(center, direction, range);
-	const int alpha = selected ? 170 : 95;
-	const float thickness = selected ? 2.3f : 1.3f;
-	const ImU32 color = LightInfluenceColor(light, alpha);
-
-	DrawProjectedBasisRing(drawList, camera, viewportPos, viewportSize, baseCenter, right, up, baseRadius, color, thickness);
-	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, right, baseRadius), color, thickness);
-	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, right, -baseRadius), color, thickness);
-	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, up, baseRadius), color, thickness);
-	DrawProjectedLine(drawList, camera, viewportPos, viewportSize, center, AddScaled(baseCenter, up, -baseRadius), color, thickness);
-}
-
-void DrawRectLightInfluence(ImDrawList* drawList,
-	Camera& camera,
-	const ImVec2& viewportPos,
-	const ImVec2& viewportSize,
-	const EU::Vector3& center,
-	const LightData& light,
-	bool selected)
-{
-	const float range = CalculateLocalLightInfluenceRadius(light);
-	EU::Vector3 direction = light.direction.normalize();
-	if (direction.magnitude() <= 0.0001f) {
-		direction = EU::Vector3(0.0f, -1.0f, 0.0f);
-	}
-
-	EU::Vector3 right;
-	EU::Vector3 up;
-	BuildLightBasis(direction, right, up);
-	const EU::Vector2 size = ResolveRectLightSize(light);
-	const float halfWidth = size.x * 0.5f;
-	const float halfHeight = size.y * 0.5f;
-	const int alpha = selected ? 170 : 95;
-	const float thickness = selected ? 2.3f : 1.3f;
-	const ImU32 color = LightInfluenceColor(light, alpha);
-
-	const EU::Vector3 corners[4] = {
-		AddScaled2(center, right, -halfWidth, up, -halfHeight),
-		AddScaled2(center, right, halfWidth, up, -halfHeight),
-		AddScaled2(center, right, halfWidth, up, halfHeight),
-		AddScaled2(center, right, -halfWidth, up, halfHeight)
-	};
-
-	for (int i = 0; i < 4; ++i) {
-		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, corners[i], corners[(i + 1) % 4], color, thickness);
-	}
-
-	if (range <= 0.0f) {
-		return;
-	}
-
-	const EU::Vector3 farCenter = AddScaled(center, direction, range);
-	const EU::Vector3 farCorners[4] = {
-		AddScaled2(farCenter, right, -halfWidth, up, -halfHeight),
-		AddScaled2(farCenter, right, halfWidth, up, -halfHeight),
-		AddScaled2(farCenter, right, halfWidth, up, halfHeight),
-		AddScaled2(farCenter, right, -halfWidth, up, halfHeight)
-	};
-
-	const ImU32 rangeColor = LightInfluenceColor(light, selected ? 115 : 62);
-	for (int i = 0; i < 4; ++i) {
-		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, farCorners[i], farCorners[(i + 1) % 4], rangeColor, thickness);
-		DrawProjectedLine(drawList, camera, viewportPos, viewportSize, corners[i], farCorners[i], rangeColor, thickness * 0.85f);
-	}
 }
 
 void DrawDebugTextureEntry(const DebugTextureItem& item, int index, int& selectedView, float thumbnailHeight) {
@@ -674,6 +384,11 @@ GUI::update(Viewport& viewport, Window& window) {
 	ImGuiIO& io = ImGui::GetIO();
 	if (io.KeyCtrl && ImGui::IsKeyPressed('S', false)) {
 		m_requestSaveScene = true;
+	}
+	if (!io.WantTextInput && !io.WantCaptureKeyboard &&
+		!io.KeyCtrl && !io.KeyAlt && !io.KeyShift &&
+		ImGui::IsKeyPressed('G', false)) {
+		m_editorGizmosVisible = !m_editorGizmosVisible;
 	}
 	ImGuizmo::SetOrthographic(false);
 	//ImGuizmo::SetRect(0, 0, (float)window.m_width, (float)window.m_height);
@@ -1273,6 +988,10 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 {
 	(void)window;
 	if (!m_viewportVisibleThisFrame) return;
+	if (!m_editorGizmosVisible) {
+		m_isUsingGizmo = false;
+		return;
+	}
 	if (actor.isNull()) return;
 	auto transform = actor->getComponent<Transform>();
 	if (transform.isNull()) return;
@@ -1399,6 +1118,21 @@ void GUI::drawGizmoToolbar()
 			if (ImGui::IsItemHovered()) {
 				ImGui::SetTooltip("Scale uses local orientation. World/Local affects Move and Rotate.");
 			}
+		}
+
+		ImGui::SameLine();
+		const bool gizmosActive = m_editorGizmosVisible;
+		if (gizmosActive) {
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.8f, 1.0f));
+		}
+		if (ImGui::Button("G")) {
+			m_editorGizmosVisible = !m_editorGizmosVisible;
+		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip(m_editorGizmosVisible ? "Hide editor gizmos (G)" : "Show editor gizmos (G)");
+		}
+		if (gizmosActive) {
+			ImGui::PopStyleColor();
 		}
 	}
 	ImGui::End();
@@ -1746,6 +1480,10 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 	EU::TSharedPointer<Actor> selectedActor,
 	ID3D11ShaderResourceView* lightIconSRV)
 {
+	(void)selectedActor;
+	if (!m_editorGizmosVisible) {
+		return;
+	}
 	if (!m_viewportDrawList || m_viewportSize.x <= 1.0f || m_viewportSize.y <= 1.0f) {
 		return;
 	}
@@ -1771,19 +1509,6 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 		}
 
 		const EU::Vector3& position = transform->getPosition();
-		const LightData& light = lightComponent->getLightData();
-		LightData visualLight = light;
-		visualLight.direction = LightDirectionFromTransform(transform);
-		const bool selected = !selectedActor.isNull() && selectedActor.get() == actor.get();
-		if (visualLight.type == LightType::Point) {
-			DrawPointLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
-		}
-		else if (visualLight.type == LightType::Spot) {
-			DrawSpotLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
-		}
-		else if (visualLight.type == LightType::Rect) {
-			DrawRectLightInfluence(m_viewportDrawList, camera, m_viewportPos, m_viewportSize, position, visualLight, selected);
-		}
 
 		ImVec2 center;
 		if (!ProjectWorldPointToViewport(position, camera, m_viewportPos, m_viewportSize, center)) {

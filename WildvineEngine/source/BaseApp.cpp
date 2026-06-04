@@ -6,10 +6,39 @@
 #include "BaseApp.h"
 #include <algorithm>
 #include <cctype>
+#if defined(_DEBUG)
+#include <d3d11sdklayers.h>
+#endif
 #include <fstream>
 #include <iomanip>
 
 namespace {
+	void clearDeviceContext(DeviceContext& deviceContext)
+	{
+		if (!deviceContext.m_deviceContext) {
+			return;
+		}
+
+		deviceContext.m_deviceContext->ClearState();
+		deviceContext.m_deviceContext->Flush();
+	}
+
+	void reportLiveD3DObjects(Device& device)
+	{
+#if defined(_DEBUG)
+		if (!device.m_device) {
+			return;
+		}
+
+		ID3D11Debug* debug = nullptr;
+		if (SUCCEEDED(device.m_device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&debug)))) {
+			debug->ReportLiveDeviceObjects(static_cast<D3D11_RLDO_FLAGS>(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL));
+			debug->Release();
+		}
+#else
+		(void)device;
+#endif
+	}
 	bool isSerializedLightActorName(const std::string& actorName)
 	{
 		return actorName.rfind("Light Actor", 0) == 0;
@@ -99,6 +128,7 @@ BaseApp::run(HINSTANCE hInst, int nCmdShow) {
 HRESULT
 BaseApp::init() {
 	HRESULT hr = S_OK;
+	m_destroyed = false;
 
 	// Crear swapchain
 	hr = m_swapChain.init(m_device, m_deviceContext, m_backBuffer, m_window);
@@ -715,6 +745,7 @@ BaseApp::update(float deltaTime) {
 		selectedActor);
 	m_renderPipeline.setShadowFactorDebugEnabled(m_gui.m_visualizeDeferredShadowFactor);
 	m_renderPipeline.setDeferredDebugViewMode(m_gui.m_deferredDebugViewMode);
+	m_renderPipeline.setEditorGizmosVisible(m_gui.m_editorGizmosVisible);
 	m_gui.outliner(m_actors);
 	if (m_gui.selectedActorIndex >= 0 &&
 		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
@@ -801,10 +832,22 @@ BaseApp::render() {
 
 void
 BaseApp::destroy() {
-	if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
+	if (m_destroyed) {
+		return;
+	}
+
+	clearDeviceContext(m_deviceContext);
+	if (m_guiInitialized) {
+		m_gui.destroy();
+		m_guiInitialized = false;
+	}
+
 	m_sceneGraph.destroy();
-	m_editorViewportPass.destroy();
 	m_renderPipeline.destroy();
+	m_editorViewportPass.destroy();
+	m_skybox.destroy();
+	m_renderScene.clear();
+
 	m_cyberGunRenderMesh.destroy();
 	m_drakefireRenderMesh.destroy();
 	m_toadRenderMesh.destroy();
@@ -831,29 +874,45 @@ BaseApp::destroy() {
 	m_toadHeadNormalSRV.destroy();
 	m_toadHeadRoughnessSRV.destroy();
 	m_lightIconTexture.destroy();
+	m_skyboxTex.destroy();
 	m_defaultRasterizer.destroy();
 	m_defaultDepthStencil.destroy();
 	m_defaultSampler.destroy();
 	//m_cbNeverChanges.destroy();
 	//m_cbChangeOnResize.destroy();
+	m_constantBuffer.destroy();
 	m_shaderProgram.destroy();
-	m_depthStencil.destroy();
+
+	for (auto& actor : m_actors) {
+		if (!actor.isNull()) {
+			actor->destroy();
+		}
+	}
+	m_actors.clear();
+	m_cyberGun.reset();
+	m_drakefirePistol.reset();
+	m_sciFiToad.reset();
+	m_directionalLightActor.reset();
+
 	m_depthStencilView.destroy();
 	m_renderTargetView.destroy();
-	m_swapChain.destroy();
+	m_depthStencil.destroy();
 	m_backBuffer.destroy();
-	if (m_guiInitialized) {
-		m_gui.destroy();
-		m_guiInitialized = false;
-	}
+	m_swapChain.destroy();
+
 	delete m_model;
 	m_model = nullptr;
 	delete m_drakefireModel;
 	m_drakefireModel = nullptr;
 	delete m_toadModel;
 	m_toadModel = nullptr;
+
+	clearDeviceContext(m_deviceContext);
 	m_deviceContext.destroy();
+	reportLiveD3DObjects(m_device);
 	m_device.destroy();
+	m_d3dReady = false;
+	m_destroyed = true;
 }
 
 LRESULT

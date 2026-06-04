@@ -23,6 +23,7 @@ public:
 
 	void begin(DeviceContext& deviceContext, const float clearColor[4]);
 	void swap(EditorViewportPass& other);
+	void copyDepthTo(DeviceContext& deviceContext, EditorViewportPass& destination) const;
 	void clearDepth(DeviceContext& deviceContext);
 	void setViewport(DeviceContext& deviceContext);
 	void destroy();

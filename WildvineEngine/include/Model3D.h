@@ -19,7 +19,7 @@ class
 Model3D : public IResource {
 public:
 	Model3D(const std::string& name, ModelType modelType) 
-	: IResource(name), m_modelType(modelType), lSdkManager(nullptr), lScene(nullptr) {
+	: IResource(name), lSdkManager(nullptr), lScene(nullptr), m_modelType(modelType) {
 		SetType(ResourceType::Model3D);
 	}
 
@@ -29,12 +29,15 @@ public:
 		MeshComponent mesh;
 		mesh.m_skyVertex.assign(vertices, vertices + 8); 
 		mesh.m_index.assign(indices, indices + 36); 
-		mesh.m_numIndex = mesh.m_index.size();
+		mesh.m_numIndex = static_cast<int>(mesh.m_index.size());
 		SetType(ResourceType::Model3D);
 		m_meshes.push_back(mesh);
 	}
 
 	~Model3D() override;
+
+	Model3D(const Model3D&) = delete;
+	Model3D& operator=(const Model3D&) = delete;
 
 	bool 
 	load(const std::string& path) override;
@@ -80,12 +83,12 @@ private:
 	bool SaveBinaryCache(const std::string& cachePath) const;
 
 private:
-	FbxManager* lSdkManager;
-	FbxScene* lScene;
+	FbxManager* lSdkManager = nullptr;
+	FbxScene* lScene = nullptr;
 	FbxAMatrix m_fbxModelRootInverse;
 	std::vector<std::string> textureFileNames;
 public:
-	ModelType m_modelType;
+	ModelType m_modelType = ModelType::OBJ;
 	std::vector<MeshComponent> m_meshes;
 };
 

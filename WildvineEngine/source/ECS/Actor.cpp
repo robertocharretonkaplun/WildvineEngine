@@ -133,14 +133,18 @@ Actor::destroy() {
 	for (auto& vertexBuffer : m_vertexBuffers) {
 		vertexBuffer.destroy();
 	}
+	m_vertexBuffers.clear();
 
 	for (auto& indexBuffer : m_indexBuffers) {
 		indexBuffer.destroy();
 	}
+	m_indexBuffers.clear();
 
 	for (auto& tex : m_textures) {
 		tex.destroy();
 	}
+	m_textures.clear();
+	m_meshes.clear();
 	m_modelBuffer.destroy();
 
 	//m_rasterizer.destroy();

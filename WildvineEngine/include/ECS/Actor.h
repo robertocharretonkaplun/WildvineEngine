@@ -46,7 +46,7 @@ public:
    * @brief Destructor virtual por defecto.
    */
   virtual 
-  ~Actor() = default;
+  ~Actor() { destroy(); }
 
   void
   awake() override {}

@@ -141,13 +141,14 @@ bool Model3D::init()
 
 void Model3D::unload()
 {
-	if (lScene) {
-		lScene->Destroy();
-		lScene = nullptr;
-	}
 	if (lSdkManager) {
+		// FbxManager owns the scene and IO settings created from it.
 		lSdkManager->Destroy();
 		lSdkManager = nullptr;
+		lScene = nullptr;
+	}
+	else {
+		lScene = nullptr;
 	}
 
 	SetState(ResourceState::Unloaded);
@@ -165,6 +166,8 @@ size_t Model3D::getSizeInBytes() const
 
 bool
 Model3D::InitializeFBXManager() {
+	unload();
+
 	lSdkManager = FbxManager::Create();
 	if (!lSdkManager) {
 		ERROR("ModelLoader", "FbxManager::Create()", "Unable to create FBX Manager!");
@@ -177,6 +180,7 @@ Model3D::InitializeFBXManager() {
 	lScene = FbxScene::Create(lSdkManager, "MyScene");
 	if (!lScene) {
 		ERROR("ModelLoader", "FbxScene::Create()", "Unable to create FBX Scene!");
+		unload();
 		return false;
 	}
 	return true;
@@ -186,61 +190,65 @@ std::vector<MeshComponent>
 Model3D::LoadFBXModel(const std::string& filePath) {
 	std::vector<MeshComponent> loadedMeshes;
 
-	if (InitializeFBXManager()) {
-		FbxImporter* lImporter = FbxImporter::Create(lSdkManager, "");
-		if (!lImporter) {
-			ERROR("ModelLoader", "FbxImporter::Create()", "Unable to create FBX Importer!");
-			return loadedMeshes;
-		}
+	if (!InitializeFBXManager()) {
+		return loadedMeshes;
+	}
 
-		if (!lImporter->Initialize(filePath.c_str(), -1, lSdkManager->GetIOSettings())) {
-			ERROR("ModelLoader", "FbxImporter::Initialize()",
-				"Unable to initialize FBX Importer! Error: " << lImporter->GetStatus().GetErrorString());
-			lImporter->Destroy();
-			return loadedMeshes;
-		}
+	FbxImporter* lImporter = FbxImporter::Create(lSdkManager, "");
+	if (!lImporter) {
+		ERROR("ModelLoader", "FbxImporter::Create()", "Unable to create FBX Importer!");
+		unload();
+		return loadedMeshes;
+	}
 
-		if (!lImporter->Import(lScene)) {
-			ERROR("ModelLoader", "FbxImporter::Import()",
-				"Unable to import FBX Scene! Error: " << lImporter->GetStatus().GetErrorString());
-			lImporter->Destroy();
-			return loadedMeshes;
-		}
-		else {
-			m_name = lImporter->GetFileName();
-		}
-
-		FbxAxisSystem::DirectX.ConvertScene(lScene);
-		FbxSystemUnit::m.ConvertScene(lScene);
-		FbxGeometryConverter gc(lSdkManager);
-		gc.Triangulate(lScene, true);
-
+	if (!lImporter->Initialize(filePath.c_str(), -1, lSdkManager->GetIOSettings())) {
+		ERROR("ModelLoader", "FbxImporter::Initialize()",
+			"Unable to initialize FBX Importer! Error: " << lImporter->GetStatus().GetErrorString());
 		lImporter->Destroy();
+		unload();
+		return loadedMeshes;
+	}
 
-		FbxNode* lRootNode = lScene->GetRootNode();
-		if (lRootNode) {
-			m_meshes.clear();
-			m_fbxModelRootInverse.SetIdentity();
-			if (lRootNode->GetChildCount() == 1) {
-				FbxNode* assetRoot = lRootNode->GetChild(0);
-				if (assetRoot && assetRoot->GetChildCount() > 0 &&
-					(!assetRoot->GetNodeAttribute() ||
-						assetRoot->GetNodeAttribute()->GetAttributeType() != FbxNodeAttribute::eMesh)) {
-					m_fbxModelRootInverse = assetRoot->EvaluateGlobalTransform().Inverse();
-				}
-			}
-			for (int i = 0; i < lRootNode->GetChildCount(); i++) {
-				ProcessFBXNode(lRootNode->GetChild(i));
-			}
-			loadedMeshes = m_meshes;
-			return loadedMeshes;
-		}
-		else {
-			ERROR("ModelLoader", "FbxScene::GetRootNode()",
-				"Unable to get root node from FBX Scene!");
-			return loadedMeshes;
+	if (!lImporter->Import(lScene)) {
+		ERROR("ModelLoader", "FbxImporter::Import()",
+			"Unable to import FBX Scene! Error: " << lImporter->GetStatus().GetErrorString());
+		lImporter->Destroy();
+		unload();
+		return loadedMeshes;
+	}
+
+	m_name = lImporter->GetFileName();
+	lImporter->Destroy();
+
+	FbxAxisSystem::DirectX.ConvertScene(lScene);
+	FbxSystemUnit::m.ConvertScene(lScene);
+	FbxGeometryConverter gc(lSdkManager);
+	gc.Triangulate(lScene, true);
+
+	FbxNode* lRootNode = lScene ? lScene->GetRootNode() : nullptr;
+	if (!lRootNode) {
+		ERROR("ModelLoader", "FbxScene::GetRootNode()",
+			"Unable to get root node from FBX Scene!");
+		unload();
+		return loadedMeshes;
+	}
+
+	m_meshes.clear();
+	m_fbxModelRootInverse.SetIdentity();
+	if (lRootNode->GetChildCount() == 1) {
+		FbxNode* assetRoot = lRootNode->GetChild(0);
+		if (assetRoot && assetRoot->GetChildCount() > 0 &&
+			(!assetRoot->GetNodeAttribute() ||
+				assetRoot->GetNodeAttribute()->GetAttributeType() != FbxNodeAttribute::eMesh)) {
+			m_fbxModelRootInverse = assetRoot->EvaluateGlobalTransform().Inverse();
 		}
 	}
+	for (int i = 0; i < lRootNode->GetChildCount(); i++) {
+		ProcessFBXNode(lRootNode->GetChild(i));
+	}
+
+	loadedMeshes = m_meshes;
+	unload();
 	return loadedMeshes;
 }
 

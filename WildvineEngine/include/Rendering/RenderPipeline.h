@@ -32,6 +32,7 @@ public:
 	ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const;
 	void setShadowFactorDebugEnabled(bool enabled);
 	void setDeferredDebugViewMode(int mode);
+	void setEditorGizmosVisible(bool visible);
 
 private:
 	HRESULT ensureDeferredInitialized(Device& device);

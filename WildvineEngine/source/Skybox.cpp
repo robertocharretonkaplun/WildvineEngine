@@ -13,7 +13,7 @@ HRESULT
 Skybox::init(Device& device, DeviceContext* deviceContext, Texture& cubemap) {
 	destroy();
 	// Cargar el cubemap
-	m_skyboxTexture = cubemap;
+	m_skyboxTexture = &cubemap;
 
 	// 1) Geometría (cubo)
 	 // Cubo unitario centrado en origen. (tamaño no importa si quitas traslación)
@@ -116,7 +116,7 @@ void Skybox::update(DeviceContext& deviceContext, Camera& camera) {
 void
 Skybox::render(DeviceContext& deviceContext) {
 	// Guard: si no se inicializó bien, no intentes renderizar
-	if (!m_cubeModel || !m_skyboxTexture.m_textureFromImg) return;
+	if (!m_cubeModel || !m_skyboxTexture || !m_skyboxTexture->m_textureFromImg) return;
 
 	// 1) States del skybox
 	m_rasterizerState.render(deviceContext);
@@ -129,17 +129,34 @@ Skybox::render(DeviceContext& deviceContext) {
 	m_samplerState.render(deviceContext, 10, 1);
 
 	// 4) IMPORTANTÍSIMO: bindea cubemap ANTES del draw (slot 10)
-	m_skyboxTexture.render(deviceContext, 10, 1);
+	m_skyboxTexture->render(deviceContext, 10, 1);
 
 	// 5) Asegura IA (topology + VB/IB) antes del DrawIndexed
 	m_skybox->renderForSkybox(deviceContext);
 
-	// 3) Limpia t0 para evitar mismatch por shaders 2D que usen t0
+	// 5) Unbind t10
 	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
 	deviceContext.m_deviceContext->PSSetShaderResources(10, 1, nullSRV);
 
-	// 5) Unbind t10
+	// 6) Limpia t0 para evitar mismatch por shaders 2D que usen t0
 	deviceContext.m_deviceContext->PSSetShaderResources(0, 1, nullSRV);
 }
 
+void
+Skybox::destroy() {
+	if (!m_skybox.isNull()) {
+		m_skybox->destroy();
+		m_skybox.reset();
+	}
 
+	delete m_cubeModel;
+	m_cubeModel = nullptr;
+
+	m_depthStencilState.destroy();
+	m_rasterizerState.destroy();
+	m_samplerState.destroy();
+	m_constantBuffer.destroy();
+	m_shaderProgram.destroy();
+
+	m_skyboxTexture = nullptr;
+}

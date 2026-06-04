@@ -143,6 +143,7 @@ private:
 	ShaderProgram												m_shaderProgram;
 	//Buffer															m_cbNeverChanges;
 	//Buffer															m_cbChangeOnResize;
+	bool m_destroyed = false;
 	bool m_d3dReady = false;
 	Buffer m_constantBuffer;
 	CBMain m_constantBufferStruct;

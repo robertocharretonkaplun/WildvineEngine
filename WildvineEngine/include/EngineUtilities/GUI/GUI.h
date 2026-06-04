@@ -33,12 +33,6 @@ public:
 	~GUI() = default;
 
   /**
-   * @brief Inicializa estado interno previo a la integracion con ImGui.
-   */
-  void 
-  awake();
-
-  /**
    * @brief Configura los backends de ImGui para Win32 y Direct3D 11.
    */
 	void 
@@ -165,6 +159,7 @@ private:
 
 public:
   bool m_isUsingGizmo = false;               ///< Indica si el gizmo esta capturando entrada del usuario.
+  bool m_editorGizmosVisible = true;         ///< Controla la visibilidad de gizmos e iconos del editor.
   bool m_visualizeDeferredShadowFactor = false; ///< Muestra el factor de sombra diferido en escala de grises.
   int m_deferredDebugViewMode = 0;           ///< Canal deferred mostrado directamente en el viewport.
   int selectedActorIndex = -1;               ///< Indice del actor seleccionado en el outliner.

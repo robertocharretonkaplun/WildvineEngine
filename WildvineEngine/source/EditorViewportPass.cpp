@@ -100,6 +100,22 @@ void EditorViewportPass::swap(EditorViewportPass& other)
 	std::swap(m_height, other.m_height);
 }
 
+void EditorViewportPass::copyDepthTo(DeviceContext& deviceContext, EditorViewportPass& destination) const
+{
+	if (!deviceContext.m_deviceContext ||
+		!isValid() ||
+		!destination.isValid() ||
+		m_width != destination.m_width ||
+		m_height != destination.m_height ||
+		!m_depthTexture.m_texture ||
+		!destination.m_depthTexture.m_texture ||
+		m_depthTexture.m_texture == destination.m_depthTexture.m_texture) {
+		return;
+	}
+
+	deviceContext.m_deviceContext->CopyResource(destination.m_depthTexture.m_texture, m_depthTexture.m_texture);
+}
+
 void EditorViewportPass::clearDepth(DeviceContext& deviceContext)
 {
 	m_dsv.render(deviceContext);

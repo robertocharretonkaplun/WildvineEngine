@@ -96,6 +96,11 @@ RenderPipeline::setDeferredDebugViewMode(int mode) {
 	m_deferredRenderer.setDeferredDebugViewMode(mode);
 }
 
+void
+RenderPipeline::setEditorGizmosVisible(bool visible) {
+	m_deferredRenderer.setEditorGizmosVisible(visible);
+}
+
 HRESULT
 RenderPipeline::ensureDeferredInitialized(Device& device) {
 	if (!m_deferredInitialized) {

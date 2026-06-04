@@ -42,5 +42,6 @@ public:
 	virtual ID3D11ShaderResourceView* getGBufferEmissiveAlphaSRV() const { return nullptr; }
 	virtual void setShadowFactorDebugEnabled(bool enabled) { (void)enabled; }
 	virtual void setDeferredDebugViewMode(int mode) { (void)mode; }
+	virtual void setEditorGizmosVisible(bool visible) { (void)visible; }
 	virtual const char* getDebugName() const = 0;
 };
