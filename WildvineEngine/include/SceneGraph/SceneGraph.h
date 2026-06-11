@@ -5,9 +5,10 @@
  */
 #pragma once
 #include "Prerequisites.h"
+#include "FixedECS/Types.h"
+#include <vector>
 
-class Entity;
-class DeviceContext;
+namespace ECS { class Registry; }
 class Camera;
 class RenderScene;
 
@@ -15,46 +16,46 @@ class RenderScene;
  * @class SceneGraph
  * @brief Administra la jerarquia de entidades y su actualizacion espacial.
  *
- * El `SceneGraph` registra entidades, resuelve relaciones padre-hijo y actualiza
- * las matrices de mundo antes de generar la informacion necesaria para render.
+ * El `SceneGraph` registra entidades del `ECS::Registry`, resuelve relaciones
+ * padre-hijo (via `HierarchyComponent`) y actualiza las matrices de mundo
+ * antes de generar la informacion necesaria para render.
  */
-class 
+class
 SceneGraph {
 public:
 	SceneGraph()  = default;
 	~SceneGraph() = default;
 
-	void 
-	init();
+	void
+	init(ECS::Registry& registry);
 
 	/**
 	 * @brief Registra una entidad dentro del grafo.
+	 *
+	 * Garantiza que la entidad tenga `Transform` y `HierarchyComponent`.
 	 * @param e Entidad a registrar.
 	 */
-	void 
-	addEntity(Entity* e);  // registra en el grafo
+	void
+	addEntity(ECS::EntityID e);
 
 	/**
 	 * @brief Elimina una entidad del grafo si esta registrada.
 	 * @param e Entidad a retirar.
 	 */
-	void 
-	removeEntity(Entity* e);
-
-	bool 
-	isAncestor(Entity* possibleAncestor, Entity* node) const;
+	void
+	removeEntity(ECS::EntityID e);
 
 	bool
-	attach(Entity* child, Entity* parent);
+	isAncestor(ECS::EntityID possibleAncestor, ECS::EntityID node) const;
 
 	bool
-	detach(Entity* child);
+	attach(ECS::EntityID child, ECS::EntityID parent);
 
-	void 
-	update(float deltaTime, DeviceContext& deviceContext);
-	
-	void 
-	render(DeviceContext& deviceContext);
+	bool
+	detach(ECS::EntityID child);
+
+	void
+	update(float deltaTime);
 
 	void
 	gatherRenderScene(RenderScene& outScene, const Camera& camera);
@@ -62,19 +63,17 @@ public:
 	void
 	destroy();
 private:
-	void 
-	updateWorldRecursive(Entity* node, const XMMATRIX& parentWorld);
-
-	bool 
-	isRoot(Entity* e) const;
+	void
+	updateWorldRecursive(ECS::EntityID node, const XMMATRIX& parentWorld);
 
 	bool
-	isRegistered(Entity* e) const;
+	isRoot(ECS::EntityID e) const;
+
+	bool
+	isRegistered(ECS::EntityID e) const;
 
 private:
-	//std::vector<EU::TSharedPointer<Entity>> m_entities;
+	ECS::Registry* m_registry = nullptr;
 public:
-	std::vector<Entity*> m_entities; ///< Entidades registradas en el grafo.
+	std::vector<ECS::EntityID> m_entities; ///< Entidades registradas en el grafo.
 };
-
-

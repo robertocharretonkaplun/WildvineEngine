@@ -13,7 +13,6 @@
 #include "RasterizerState.h"
 #include "DepthStencilState.h"
 #include "EngineUtilities\Utilities\Camera.h"
-#include "ECS\Actor.h"
 
 class Device;
 class DeviceContext;
@@ -44,7 +43,8 @@ private:
 	DepthStencilState m_depthStencilState;
 	Texture* m_skyboxTexture = nullptr;
 	Model3D* m_cubeModel = nullptr;
-	EU::TSharedPointer<Actor> m_skybox;
-
+	Buffer m_vertexBuffer;
+	Buffer m_indexBuffer;
+	int m_indexCount = 0;
 };
 

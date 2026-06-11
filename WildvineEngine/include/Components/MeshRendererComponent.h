@@ -1,27 +1,21 @@
 /**
  * @file MeshRendererComponent.h
- * @brief Declara la API de MeshRendererComponent dentro del subsistema ECS.
- * @ingroup ecs
+ * @brief Componente de render de mallas (dato puro) para el ECS.
+ * @ingroup components
  */
 #pragma once
 #include "Prerequisites.h"
-#include "ECS/Component.h"
+#include <vector>
 
 class Mesh;
 class MaterialInstance;
-class DeviceContext;
 
-class
-MeshRendererComponent : public Component {
-public:
-	MeshRendererComponent()
-		: Component(ComponentType::MESH) {}
-
-	void init() override {}
-	void update(float deltaTime) override {}
-	void render(DeviceContext& deviceContext) override {}
-	void destroy() override {}
-
+/**
+ * @struct MeshRendererComponent
+ * @brief Asocia una malla y sus instancias de material a una entidad.
+ */
+struct
+MeshRendererComponent {
 	void setMesh(Mesh* mesh) { m_mesh = mesh; }
 	Mesh* getMesh() const { return m_mesh; }
 
@@ -57,12 +51,9 @@ public:
 	bool canCastShadow() const { return m_castShadow; }
 	void setCastShadow(bool value) { m_castShadow = value; }
 
-private:
 	Mesh* m_mesh = nullptr;
 	MaterialInstance* m_materialInstance = nullptr;
 	std::vector<MaterialInstance*> m_materialInstances;
 	bool m_visible = true;
 	bool m_castShadow = true;
 };
-
-

@@ -11,12 +11,13 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include "ImGuizmo.h"
+#include "FixedECS/Types.h"
 
+namespace ECS { class Registry; }
 class Viewport;
 class Window;
 class Device;
 class DeviceContext;
-class Actor;
 class Camera;
 
 /**
@@ -74,16 +75,16 @@ public:
               bool displayAsDegrees = false);
 
   void
-  inspectorGeneral(EU::TSharedPointer<Actor> actor);
+  inspectorGeneral(ECS::Registry& registry, ECS::EntityID entity);
 
   void
-  inspectorContainer(EU::TSharedPointer<Actor> actor);
+  inspectorContainer(ECS::Registry& registry, ECS::EntityID entity);
 
   void
-  outliner(const std::vector<EU::TSharedPointer<Actor>>& actors);
+  outliner(ECS::Registry& registry, const std::vector<ECS::EntityID>& entities);
 
-  void 
-  editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> actor);
+  void
+  editTransform(Camera& cam, Window& window, ECS::Registry& registry, ECS::EntityID entity);
 
   void 
   drawGizmoToolbar();
@@ -98,15 +99,17 @@ public:
   drawStudioTopRibbon();
 
   void drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
-                         const std::vector<EU::TSharedPointer<Actor>>& actors,
+                         ECS::Registry& registry,
+                         const std::vector<ECS::EntityID>& entities,
                          Camera& camera,
                          Window& window,
-                         EU::TSharedPointer<Actor> selectedActor,
+                         ECS::EntityID selectedEntity,
                          ID3D11ShaderResourceView* lightIconSRV);
 
-  void drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
+  void drawLightIcons(ECS::Registry& registry,
+                      const std::vector<ECS::EntityID>& entities,
                       Camera& camera,
-                      EU::TSharedPointer<Actor> selectedActor,
+                      ECS::EntityID selectedEntity,
                       ID3D11ShaderResourceView* lightIconSRV);
 
   void drawRenderDebugPanel(ID3D11ShaderResourceView* preShadowSRV,
@@ -117,7 +120,8 @@ public:
                              ID3D11ShaderResourceView* normalRoughnessSRV,
                              ID3D11ShaderResourceView* worldAoSRV,
                              ID3D11ShaderResourceView* emissiveAlphaSRV,
-                             EU::TSharedPointer<Actor> selectedActor);
+                             ECS::Registry& registry,
+                             ECS::EntityID selectedEntity);
 
   void drawEditorDockspace();
 

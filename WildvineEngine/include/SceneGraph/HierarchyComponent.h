@@ -4,52 +4,38 @@
  * @ingroup scenegraph
  */
 #pragma once
-#include "Prerequisites.h"
-#include "ECS/Component.h"
+#include "FixedECS/Types.h"
+#include <algorithm>
+#include <vector>
 
-class DeviceContext;
-class Entity;
-
-class 
-HierarchyComponent : public Component {
-public:
-	HierarchyComponent() : Component(ComponentType::HIERARCHY) {}
-	~HierarchyComponent() = default;
-
-	void 
-	init() override {}
-	
-	void 
-	update(float) override {}
-	
-	void 
-	render(DeviceContext& deviceContext) override {}
-
-	void 
-	destroy() override { 
-		m_children.clear(); 
-		m_parent = nullptr; 
-	}
-
+/**
+ * @struct HierarchyComponent
+ * @brief Relacion padre-hijos de una entidad dentro del SceneGraph.
+ *
+ * Guarda EntityIDs (no punteros): el versionado del nuevo ECS invalida
+ * automaticamente referencias a entidades destruidas.
+ */
+struct
+HierarchyComponent {
 	// API SceneGraph
-	void 
-	setParent(Entity* parent) { 
-		m_parent = parent; 
+	void
+	setParent(ECS::EntityID parent) {
+		m_parent = parent;
 	}
 
-	bool 
+	bool
 	isRoot() const {
-		return m_parent == nullptr;
+		return m_parent == ECS::NULL_ENTITY;
 	}
-	
-	bool 
+
+	bool
 	hasChildren() const {
 		return !m_children.empty();
 	}
 
-	void 
-	addChild(Entity* child) {
-		if(!child) {
+	void
+	addChild(ECS::EntityID child) {
+		if (child == ECS::NULL_ENTITY) {
 			return;
 		}
 
@@ -60,8 +46,8 @@ public:
 	}
 
 	void
-	removeChild(Entity* child) {
-		if (!child) return;
+	removeChild(ECS::EntityID child) {
+		if (child == ECS::NULL_ENTITY) return;
 
 		m_children.erase(
 			std::remove(m_children.begin(), m_children.end(), child),
@@ -69,8 +55,6 @@ public:
 		);
 	}
 
-public:
-	Entity* m_parent = nullptr;
-	std::vector<Entity*> m_children;
+	ECS::EntityID m_parent = ECS::NULL_ENTITY;
+	std::vector<ECS::EntityID> m_children;
 };
-

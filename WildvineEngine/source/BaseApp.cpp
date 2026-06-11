@@ -44,26 +44,31 @@ namespace {
 		return actorName.rfind("Light Actor", 0) == 0;
 	}
 
-	void ensureDefaultLightComponent(const EU::TSharedPointer<Actor>& actor)
+	template<typename T>
+	T& getOrAddComponent(ECS::Registry& registry, ECS::EntityID entity)
 	{
-		if (actor.isNull()) {
+		if (T* component = registry.TryGetComponent<T>(entity)) {
+			return *component;
+		}
+		return registry.AddComponent<T>(entity);
+	}
+
+	void ensureDefaultLightComponent(ECS::Registry& registry, ECS::EntityID entity)
+	{
+		if (entity == ECS::NULL_ENTITY || !registry.IsAlive(entity)) {
 			return;
 		}
 
-		EU::TSharedPointer<LightComponent> lightComponent = actor->getComponent<LightComponent>();
-		if (!lightComponent) {
-			lightComponent = EU::MakeShared<LightComponent>();
-			actor->addComponent(lightComponent);
-		}
+		LightComponent& lightComponent = getOrAddComponent<LightComponent>(registry, entity);
 
-		LightData& light = lightComponent->getLightData();
+		LightData& light = lightComponent.getLightData();
 		light.type = LightType::Directional;
 		light.color = EU::Vector3(1.0f, 1.0f, 1.0f);
 		light.intensity = 1.0f;
 		light.direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
 		light.range = 12.0f;
 		light.spotAngle = 0.0f;
-		lightComponent->setCastShadow(true);
+		lightComponent.setCastShadow(true);
 	}
 }
 
@@ -72,7 +77,7 @@ BaseApp::awake() {
 	HRESULT hr = S_OK;
 
 	// Inicializacion de dlls y elementos externos al motor.
-	m_sceneGraph.init();
+	m_sceneGraph.init(m_registry);
 
 	// Log Success Message
 	MESSAGE("Main", "Awake", "Application awake successfully.");
@@ -200,11 +205,11 @@ BaseApp::init() {
 	}
 
 	// Set CyberGun Actor
-	m_cyberGun = EU::MakeShared<Actor>(m_device);
-	m_drakefirePistol = EU::MakeShared<Actor>(m_device);
-	m_sciFiToad = EU::MakeShared<Actor>(m_device);
+	m_cyberGun = createEntity("CyberGun");
+	m_drakefirePistol = createEntity("Drakefire Pistol");
+	m_sciFiToad = createEntity("Sci-Fi Toad");
 
-	if (!m_cyberGun.isNull()) {
+	{
 		m_model = new Model3D("CyberGun.fbx", ModelType::FBX);
 		if (!m_model || !m_model->load("CyberGun.fbx")) {
 			ERROR("Main", "InitDevice", "Failed to load CyberGun model.");
@@ -245,19 +250,12 @@ BaseApp::init() {
 		if (FAILED(emissiveHr)) {
 			MESSAGE("Main", "InitDevice", "CyberGun emissive texture not found. Continuing without emissive map.");
 		}
-		m_cyberGun->setName("CyberGun");
-		m_actors.push_back(m_cyberGun);
-
-		m_cyberGun->getComponent<Transform>()->setTransform(EU::Vector3(2.0f, -1.90f, 11.60f),
+		m_registry.GetComponent<Transform>(m_cyberGun).setTransform(EU::Vector3(2.0f, -1.90f, 11.60f),
 			EU::Vector3(-0.60f, 3.0f, -0.20f),
 			EU::Vector3(1.0f, 1.0f, 1.0f));
 	}
-	else {
-		ERROR("Main", "InitDevice", "Failed to create cyber Gun Actor.");
-		return E_FAIL;
-	}
 
-	if (!m_drakefirePistol.isNull()) {
+	{
 		m_drakefireModel = new Model3D("Models/drakefire_pistol_low_OBJ/drakefire_pistol_low.obj", ModelType::OBJ);
 		if (!m_drakefireModel || !m_drakefireModel->load("Models/drakefire_pistol_low_OBJ/drakefire_pistol_low.obj")) {
 			ERROR("Main", "InitDevice", "Failed to load Drakefire pistol model.");
@@ -295,18 +293,12 @@ BaseApp::init() {
 			return hr;
 		}
 
-		m_drakefirePistol->setName("Drakefire Pistol");
-		m_actors.push_back(m_drakefirePistol);
-		m_drakefirePistol->getComponent<Transform>()->setTransform(EU::Vector3(-2.5f, -1.90f, 9.5f),
+		m_registry.GetComponent<Transform>(m_drakefirePistol).setTransform(EU::Vector3(-2.5f, -1.90f, 9.5f),
 			EU::Vector3(-0.30f, 0.45f, 0.0f),
 			EU::Vector3(1.0f, 1.0f, 1.0f));
 	}
-	else {
-		ERROR("Main", "InitDevice", "Failed to create Drakefire pistol Actor.");
-		return E_FAIL;
-	}
 
-	if (!m_sciFiToad.isNull()) {
+	{
 		m_toadModel = new Model3D("Models/Bake_Sci-fiToad.fbx", ModelType::FBX);
 		if (!m_toadModel || !m_toadModel->load("Models/Bake_Sci-fiToad.fbx")) {
 			ERROR("Main", "InitDevice", "Failed to load Sci-Fi Toad model.");
@@ -380,20 +372,9 @@ BaseApp::init() {
 			return hr;
 		}
 
-		m_sciFiToad->setName("Sci-Fi Toad");
-		m_actors.push_back(m_sciFiToad);
-		m_sciFiToad->getComponent<Transform>()->setTransform(EU::Vector3(0.0f, -1.90f, 10.5f),
+		m_registry.GetComponent<Transform>(m_sciFiToad).setTransform(EU::Vector3(0.0f, -1.90f, 10.5f),
 			EU::Vector3(0.0f, 3.14f, 0.0f),
 			EU::Vector3(1.0f, 1.0f, 1.0f));
-	}
-	else {
-		ERROR("Main", "InitDevice", "Failed to create Sci-Fi Toad Actor.");
-		return E_FAIL;
-	}
-
-	// Store the Actors in the Scene Graph
-	for (auto& actor : m_actors) {
-		m_sceneGraph.addEntity(actor.get());
 	}
 
 	LayoutBuilder builder;
@@ -628,61 +609,38 @@ BaseApp::init() {
 		m_toadRenderMesh.getSubmeshes().push_back(std::move(submesh));
 	}
 
-	EU::TSharedPointer<MeshRendererComponent> meshRenderer = m_cyberGun->getComponent<MeshRendererComponent>();
-	if (!meshRenderer) {
-		meshRenderer = EU::MakeShared<MeshRendererComponent>();
-		m_cyberGun->addComponent(meshRenderer);
-	}
-	meshRenderer->setMesh(&m_cyberGunRenderMesh);
-	meshRenderer->setMaterialInstance(&m_cyberGunMaterial);
-	meshRenderer->setVisible(true);
-	meshRenderer->setCastShadow(true);
+	MeshRendererComponent& meshRenderer = getOrAddComponent<MeshRendererComponent>(m_registry, m_cyberGun);
+	meshRenderer.setMesh(&m_cyberGunRenderMesh);
+	meshRenderer.setMaterialInstance(&m_cyberGunMaterial);
+	meshRenderer.setVisible(true);
+	meshRenderer.setCastShadow(true);
 
-	EU::TSharedPointer<MeshRendererComponent> drakefireMeshRenderer = m_drakefirePistol->getComponent<MeshRendererComponent>();
-	if (!drakefireMeshRenderer) {
-		drakefireMeshRenderer = EU::MakeShared<MeshRendererComponent>();
-		m_drakefirePistol->addComponent(drakefireMeshRenderer);
-	}
-	drakefireMeshRenderer->setMesh(&m_drakefireRenderMesh);
-	drakefireMeshRenderer->setMaterialInstance(&m_drakefireMaterial);
-	drakefireMeshRenderer->setVisible(true);
-	drakefireMeshRenderer->setCastShadow(true);
+	MeshRendererComponent& drakefireMeshRenderer = getOrAddComponent<MeshRendererComponent>(m_registry, m_drakefirePistol);
+	drakefireMeshRenderer.setMesh(&m_drakefireRenderMesh);
+	drakefireMeshRenderer.setMaterialInstance(&m_drakefireMaterial);
+	drakefireMeshRenderer.setVisible(true);
+	drakefireMeshRenderer.setCastShadow(true);
 
-	EU::TSharedPointer<MeshRendererComponent> toadMeshRenderer = m_sciFiToad->getComponent<MeshRendererComponent>();
-	if (!toadMeshRenderer) {
-		toadMeshRenderer = EU::MakeShared<MeshRendererComponent>();
-		m_sciFiToad->addComponent(toadMeshRenderer);
-	}
-	toadMeshRenderer->setMesh(&m_toadRenderMesh);
-	toadMeshRenderer->setMaterialInstances({ &m_toadMaterial, &m_toadGlassMaterial, &m_toadHeadMaterial });
-	toadMeshRenderer->setVisible(true);
-	toadMeshRenderer->setCastShadow(true);
+	MeshRendererComponent& toadMeshRenderer = getOrAddComponent<MeshRendererComponent>(m_registry, m_sciFiToad);
+	toadMeshRenderer.setMesh(&m_toadRenderMesh);
+	toadMeshRenderer.setMaterialInstances({ &m_toadMaterial, &m_toadGlassMaterial, &m_toadHeadMaterial });
+	toadMeshRenderer.setVisible(true);
+	toadMeshRenderer.setCastShadow(true);
 
-	m_directionalLightActor = EU::MakeShared<Actor>(m_device);
-	if (!m_directionalLightActor.isNull()) {
-		m_directionalLightActor->setName("Light Actor 1");
-		EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
-		if (!lightComponent) {
-			lightComponent = EU::MakeShared<LightComponent>();
-			m_directionalLightActor->addComponent(lightComponent);
-		}
+	m_directionalLightActor = createEntity("Light Actor 1");
+	{
+		LightComponent& lightComponent = getOrAddComponent<LightComponent>(m_registry, m_directionalLightActor);
 
-		lightComponent->getLightData().type = LightType::Directional;
-		lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
-		lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
-		lightComponent->getLightData().intensity = 1.0f;
-		lightComponent->getLightData().range = 12.0f;
-		lightComponent->setCastShadow(true);
+		lightComponent.getLightData().type = LightType::Directional;
+		lightComponent.getLightData().direction = m_constantBufferStruct.LightDir;
+		lightComponent.getLightData().color = m_constantBufferStruct.LightColor;
+		lightComponent.getLightData().intensity = 1.0f;
+		lightComponent.getLightData().range = 12.0f;
+		lightComponent.setCastShadow(true);
 
-		EU::TSharedPointer<Transform> transform = m_directionalLightActor->getComponent<Transform>();
-		if (transform) {
-			transform->setTransform(EU::Vector3(0.0f, 3.0f, 0.0f),
-				EU::Vector3(0.0f, 0.0f, 0.0f),
-				EU::Vector3(1.0f, 1.0f, 1.0f));
-		}
-
-		m_actors.push_back(m_directionalLightActor);
-		m_sceneGraph.addEntity(m_directionalLightActor.get());
+		m_registry.GetComponent<Transform>(m_directionalLightActor).setTransform(EU::Vector3(0.0f, 3.0f, 0.0f),
+			EU::Vector3(0.0f, 0.0f, 0.0f),
+			EU::Vector3(1.0f, 1.0f, 1.0f));
 	}
 
 	loadScene(getDefaultScenePath());
@@ -724,34 +682,35 @@ BaseApp::update(float deltaTime) {
 	m_gui.update(m_viewport, m_window);
 	m_camera.updateViewMatrix();
 	if (m_gui.consumeCreateLightActorRequest()) {
-		EU::TSharedPointer<Actor> lightActor = createLightActor();
-		if (!lightActor.isNull()) {
-			m_gui.selectedActorIndex = static_cast<int>(m_actors.size()) - 1;
+		ECS::EntityID lightActor = createLightActor();
+		if (lightActor != ECS::NULL_ENTITY) {
+			m_gui.selectedActorIndex = static_cast<int>(m_entities.size()) - 1;
 		}
 	}
-	EU::TSharedPointer<Actor> selectedActor;
+	ECS::EntityID selectedEntity = ECS::NULL_ENTITY;
 	if (m_gui.selectedActorIndex >= 0 &&
-		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
-		selectedActor = m_actors[m_gui.selectedActorIndex];
+		m_gui.selectedActorIndex < static_cast<int>(m_entities.size())) {
+		selectedEntity = m_entities[m_gui.selectedActorIndex];
 	}
 	bool show_demo_window = true;
 	//ImGui::ShowDemoWindow(&show_demo_window);
-	m_gui.drawViewportPanel(m_editorViewportPass.getSRV(), m_actors, m_camera, m_window, selectedActor, m_lightIconTexture.m_textureFromImg);
+	m_gui.drawViewportPanel(m_editorViewportPass.getSRV(), m_registry, m_entities, m_camera, m_window, selectedEntity, m_lightIconTexture.m_textureFromImg);
 	m_gui.drawRenderDebugPanel(m_renderPipeline.getPreShadowSRV(), m_editorViewportPass.getSRV(), m_renderPipeline.getShadowMapSRV());
 	m_gui.drawGBufferDebugPanel(m_renderPipeline.getGBufferAlbedoMetallicSRV(),
 		m_renderPipeline.getGBufferNormalRoughnessSRV(),
 		m_renderPipeline.getGBufferWorldAoSRV(),
 		m_renderPipeline.getGBufferEmissiveAlphaSRV(),
-		selectedActor);
+		m_registry,
+		selectedEntity);
 	m_renderPipeline.setShadowFactorDebugEnabled(m_gui.m_visualizeDeferredShadowFactor);
 	m_renderPipeline.setDeferredDebugViewMode(m_gui.m_deferredDebugViewMode);
 	m_renderPipeline.setEditorGizmosVisible(m_gui.m_editorGizmosVisible);
-	m_gui.outliner(m_actors);
+	m_gui.outliner(m_registry, m_entities);
 	if (m_gui.selectedActorIndex >= 0 &&
-		m_gui.selectedActorIndex < static_cast<int>(m_actors.size())) {
-		selectedActor = m_actors[m_gui.selectedActorIndex];
+		m_gui.selectedActorIndex < static_cast<int>(m_entities.size())) {
+		selectedEntity = m_entities[m_gui.selectedActorIndex];
 	}
-	m_gui.inspectorGeneral(selectedActor);
+	m_gui.inspectorGeneral(m_registry, selectedEntity);
 	if (m_gui.consumeSaveSceneRequest()) {
 		saveScene(getDefaultScenePath());
 	}
@@ -799,7 +758,7 @@ BaseApp::update(float deltaTime) {
 	m_skybox.update(m_deviceContext, m_camera);
 
 	// Update Actors
-	m_sceneGraph.update(deltaTime, m_deviceContext);
+	m_sceneGraph.update(deltaTime);
 
 }
 
@@ -883,16 +842,12 @@ BaseApp::destroy() {
 	m_constantBuffer.destroy();
 	m_shaderProgram.destroy();
 
-	for (auto& actor : m_actors) {
-		if (!actor.isNull()) {
-			actor->destroy();
-		}
-	}
-	m_actors.clear();
-	m_cyberGun.reset();
-	m_drakefirePistol.reset();
-	m_sciFiToad.reset();
-	m_directionalLightActor.reset();
+	m_registry.Clear();
+	m_entities.clear();
+	m_cyberGun = ECS::NULL_ENTITY;
+	m_drakefirePistol = ECS::NULL_ENTITY;
+	m_sciFiToad = ECS::NULL_ENTITY;
+	m_directionalLightActor = ECS::NULL_ENTITY;
 
 	m_depthStencilView.destroy();
 	m_renderTargetView.destroy();
@@ -1043,46 +998,42 @@ std::string BaseApp::getDefaultScenePath() const
 	return "Saved/DefaultScene.wvscene";
 }
 
-EU::TSharedPointer<Actor> BaseApp::createLightActor(const std::string& name)
+ECS::EntityID BaseApp::createEntity(const std::string& name)
 {
-	EU::TSharedPointer<Actor> lightActor = EU::MakeShared<Actor>(m_device);
-	if (lightActor.isNull()) {
-		ERROR("Main", "createLightActor", "Failed to create Light Actor.");
-		return lightActor;
-	}
+	ECS::EntityID entity = m_registry.CreateEntity();
+	m_registry.AddComponent<NameComponent>(entity, name);
 
+	// El SceneGraph garantiza Transform + HierarchyComponent
+	m_sceneGraph.addEntity(entity);
+	m_entities.push_back(entity);
+	return entity;
+}
+
+ECS::EntityID BaseApp::createLightActor(const std::string& name)
+{
 	size_t lightActorCount = 0;
-	for (const auto& actor : m_actors) {
-		if (!actor.isNull() && !actor->getComponent<LightComponent>().isNull()) {
+	for (const ECS::EntityID entity : m_entities) {
+		if (m_registry.IsAlive(entity) && m_registry.HasComponent<LightComponent>(entity)) {
 			++lightActorCount;
 		}
 	}
 
-	lightActor->setName(name.empty() ? "Light Actor " + std::to_string(lightActorCount + 1) : name);
+	ECS::EntityID lightActor = createEntity(
+		name.empty() ? "Light Actor " + std::to_string(lightActorCount + 1) : name);
 
-	EU::TSharedPointer<LightComponent> lightComponent = lightActor->getComponent<LightComponent>();
-	if (!lightComponent) {
-		lightComponent = EU::MakeShared<LightComponent>();
-		lightActor->addComponent(lightComponent);
-	}
+	LightComponent& lightComponent = getOrAddComponent<LightComponent>(m_registry, lightActor);
+	lightComponent.getLightData().type = LightType::Point;
+	lightComponent.getLightData().direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
+	lightComponent.getLightData().color = EU::Vector3(1.0f, 1.0f, 1.0f);
+	lightComponent.getLightData().intensity = 1.0f;
+	lightComponent.getLightData().range = 0.0f;
+	lightComponent.setCastShadow(false);
 
-	lightComponent->getLightData().type = LightType::Point;
-	lightComponent->getLightData().direction = EU::Vector3(-0.20f, -1.0f, 1.0f);
-	lightComponent->getLightData().color = EU::Vector3(1.0f, 1.0f, 1.0f);
-	lightComponent->getLightData().intensity = 1.0f;
-	lightComponent->getLightData().range = 0.0f;
-	lightComponent->setCastShadow(false);
+	const float lightOffset = static_cast<float>(lightActorCount) * 2.0f;
+	m_registry.GetComponent<Transform>(lightActor).setTransform(EU::Vector3(lightOffset, 3.0f, 0.0f),
+		EU::Vector3(0.0f, 0.0f, 0.0f),
+		EU::Vector3(1.0f, 1.0f, 1.0f));
 
-	EU::TSharedPointer<Transform> transform = lightActor->getComponent<Transform>();
-	if (transform) {
-		const float lightOffset = static_cast<float>(lightActorCount) * 2.0f;
-		transform->setTransform(EU::Vector3(lightOffset, 3.0f, 0.0f),
-			EU::Vector3(0.0f, 0.0f, 0.0f),
-			EU::Vector3(1.0f, 1.0f, 1.0f));
-	}
-
-	m_actors.push_back(lightActor);
-	m_sceneGraph.addEntity(lightActor.get());
 	return lightActor;
 }
 
@@ -1095,17 +1046,19 @@ bool BaseApp::saveScene(const std::string& path)
 	}
 
 	stream << "WVSCENE 2\n";
-	stream << "ACTOR_COUNT " << m_actors.size() << "\n";
+	stream << "ACTOR_COUNT " << m_entities.size() << "\n";
 
-	for (size_t actorIndex = 0; actorIndex < m_actors.size(); ++actorIndex) {
-		const EU::TSharedPointer<Actor>& actor = m_actors[actorIndex];
-		if (actor.isNull()) {
+	for (size_t actorIndex = 0; actorIndex < m_entities.size(); ++actorIndex) {
+		const ECS::EntityID entity = m_entities[actorIndex];
+		if (entity == ECS::NULL_ENTITY || !m_registry.IsAlive(entity)) {
 			continue;
 		}
 
-		stream << "ACTOR " << actorIndex << " " << std::quoted(actor->getName()) << "\n";
+		NameComponent* nameComponent = m_registry.TryGetComponent<NameComponent>(entity);
+		const std::string entityName = nameComponent ? nameComponent->name : "Actor";
+		stream << "ACTOR " << actorIndex << " " << std::quoted(entityName) << "\n";
 
-		EU::TSharedPointer<Transform> transform = actor->getComponent<Transform>();
+		Transform* transform = m_registry.TryGetComponent<Transform>(entity);
 		if (transform) {
 			const EU::Vector3& position = transform->getPosition();
 			const EU::Vector3& rotation = transform->getRotation();
@@ -1115,7 +1068,7 @@ bool BaseApp::saveScene(const std::string& path)
 			stream << "SCALE " << scale.x << " " << scale.y << " " << scale.z << "\n";
 		}
 
-		EU::TSharedPointer<MeshRendererComponent> meshRenderer = actor->getComponent<MeshRendererComponent>();
+		MeshRendererComponent* meshRenderer = m_registry.TryGetComponent<MeshRendererComponent>(entity);
 		if (meshRenderer) {
 			stream << "VISIBLE " << (meshRenderer->isVisible() ? 1 : 0) << "\n";
 			stream << "CAST_SHADOW " << (meshRenderer->canCastShadow() ? 1 : 0) << "\n";
@@ -1149,7 +1102,7 @@ bool BaseApp::saveScene(const std::string& path)
 			}
 		}
 
-		EU::TSharedPointer<LightComponent> lightComponent = actor->getComponent<LightComponent>();
+		LightComponent* lightComponent = m_registry.TryGetComponent<LightComponent>(entity);
 		if (lightComponent) {
 			const LightData& light = lightComponent->getLightData();
 			stream << "LIGHT_COMPONENT "
@@ -1204,7 +1157,10 @@ bool BaseApp::loadScene(const std::string& path)
 		return false;
 	}
 
-	EU::TSharedPointer<Actor> currentActor;
+	ECS::EntityID currentEntity = ECS::NULL_ENTITY;
+	const auto currentEntityValid = [&]() {
+		return currentEntity != ECS::NULL_ENTITY && m_registry.IsAlive(currentEntity);
+	};
 	while (stream >> token) {
 		if (token == "ACTOR_COUNT") {
 			size_t ignoredCount = 0;
@@ -1214,62 +1170,56 @@ bool BaseApp::loadScene(const std::string& path)
 			size_t actorIndex = 0;
 			std::string actorName;
 			stream >> actorIndex >> std::quoted(actorName);
-			currentActor = EU::TSharedPointer<Actor>();
-			while (actorIndex >= m_actors.size()) {
-				EU::TSharedPointer<Actor> newActor = EU::MakeShared<Actor>(m_device);
-				if (newActor.isNull()) {
-					break;
-				}
-				newActor->setName("Actor " + std::to_string(m_actors.size() + 1));
-				m_actors.push_back(newActor);
-				m_sceneGraph.addEntity(newActor.get());
+			currentEntity = ECS::NULL_ENTITY;
+			while (actorIndex >= m_entities.size()) {
+				createEntity("Actor " + std::to_string(m_entities.size() + 1));
 			}
-			if (actorIndex < m_actors.size()) {
-				currentActor = m_actors[actorIndex];
+			if (actorIndex < m_entities.size()) {
+				currentEntity = m_entities[actorIndex];
 			}
-			if (!currentActor.isNull()) {
-				currentActor->setName(actorName);
+			if (currentEntityValid()) {
+				m_registry.SetComponent<NameComponent>(currentEntity, NameComponent(actorName));
 				if (isSerializedLightActorName(actorName)) {
-					ensureDefaultLightComponent(currentActor);
+					ensureDefaultLightComponent(m_registry, currentEntity);
 				}
 			}
 		}
-		else if (token == "POSITION" && !currentActor.isNull()) {
+		else if (token == "POSITION" && currentEntityValid()) {
 			float x = 0.0f, y = 0.0f, z = 0.0f;
 			stream >> x >> y >> z;
-			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			Transform* transform = m_registry.TryGetComponent<Transform>(currentEntity);
 			if (transform) {
 				transform->setPosition(EU::Vector3(x, y, z));
 			}
 		}
-		else if (token == "ROTATION" && !currentActor.isNull()) {
+		else if (token == "ROTATION" && currentEntityValid()) {
 			float x = 0.0f, y = 0.0f, z = 0.0f;
 			stream >> x >> y >> z;
-			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			Transform* transform = m_registry.TryGetComponent<Transform>(currentEntity);
 			if (transform) {
 				transform->setRotation(EU::Vector3(x, y, z));
 			}
 		}
-		else if (token == "SCALE" && !currentActor.isNull()) {
+		else if (token == "SCALE" && currentEntityValid()) {
 			float x = 1.0f, y = 1.0f, z = 1.0f;
 			stream >> x >> y >> z;
-			EU::TSharedPointer<Transform> transform = currentActor->getComponent<Transform>();
+			Transform* transform = m_registry.TryGetComponent<Transform>(currentEntity);
 			if (transform) {
 				transform->setScale(EU::Vector3(x, y, z));
 			}
 		}
-		else if (token == "VISIBLE" && !currentActor.isNull()) {
+		else if (token == "VISIBLE" && currentEntityValid()) {
 			int value = 1;
 			stream >> value;
-			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			MeshRendererComponent* meshRenderer = m_registry.TryGetComponent<MeshRendererComponent>(currentEntity);
 			if (meshRenderer) {
 				meshRenderer->setVisible(value != 0);
 			}
 		}
-		else if (token == "CAST_SHADOW" && !currentActor.isNull()) {
+		else if (token == "CAST_SHADOW" && currentEntityValid()) {
 			int value = 1;
 			stream >> value;
-			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			MeshRendererComponent* meshRenderer = m_registry.TryGetComponent<MeshRendererComponent>(currentEntity);
 			if (meshRenderer) {
 				meshRenderer->setCastShadow(value != 0);
 			}
@@ -1278,7 +1228,7 @@ bool BaseApp::loadScene(const std::string& path)
 			size_t ignoredCount = 0;
 			stream >> ignoredCount;
 		}
-		else if (token == "MATERIAL" && !currentActor.isNull()) {
+		else if (token == "MATERIAL" && currentEntityValid()) {
 			size_t materialIndex = 0;
 			int domain = 0;
 			int blendMode = 0;
@@ -1296,7 +1246,7 @@ bool BaseApp::loadScene(const std::string& path)
 				>> params.normalScale
 				>> params.alphaCutoff;
 
-			EU::TSharedPointer<MeshRendererComponent> meshRenderer = currentActor->getComponent<MeshRendererComponent>();
+			MeshRendererComponent* meshRenderer = m_registry.TryGetComponent<MeshRendererComponent>(currentEntity);
 			if (meshRenderer) {
 				const std::vector<MaterialInstance*>& materials = meshRenderer->getMaterialInstances();
 				if (materialIndex < materials.size() && materials[materialIndex]) {
@@ -1309,7 +1259,7 @@ bool BaseApp::loadScene(const std::string& path)
 				}
 			}
 		}
-		else if (token == "LIGHT_COMPONENT" && !currentActor.isNull()) {
+		else if (token == "LIGHT_COMPONENT" && currentEntityValid()) {
 			int type = 0;
 			int castShadow = 0;
 			LightData light{};
@@ -1341,13 +1291,9 @@ bool BaseApp::loadScene(const std::string& path)
 				light.rectSize = ResolveRectLightSize(light);
 			}
 
-			EU::TSharedPointer<LightComponent> lightComponent = currentActor->getComponent<LightComponent>();
-			if (!lightComponent) {
-				lightComponent = EU::MakeShared<LightComponent>();
-				currentActor->addComponent(lightComponent);
-			}
-			lightComponent->getLightData() = light;
-			lightComponent->setCastShadow(castShadow != 0);
+			LightComponent& lightComponent = getOrAddComponent<LightComponent>(m_registry, currentEntity);
+			lightComponent.getLightData() = light;
+			lightComponent.setCastShadow(castShadow != 0);
 		}
 		else if (token == "LIGHT") {
 			stream >> m_constantBufferStruct.LightDir.x
@@ -1357,8 +1303,8 @@ bool BaseApp::loadScene(const std::string& path)
 				>> m_constantBufferStruct.LightColor.y
 				>> m_constantBufferStruct.LightColor.z;
 
-			if (!m_directionalLightActor.isNull()) {
-				EU::TSharedPointer<LightComponent> lightComponent = m_directionalLightActor->getComponent<LightComponent>();
+			if (m_directionalLightActor != ECS::NULL_ENTITY && m_registry.IsAlive(m_directionalLightActor)) {
+				LightComponent* lightComponent = m_registry.TryGetComponent<LightComponent>(m_directionalLightActor);
 				if (lightComponent) {
 					lightComponent->getLightData().direction = m_constantBufferStruct.LightDir;
 					lightComponent->getLightData().color = m_constantBufferStruct.LightColor;
@@ -1366,7 +1312,7 @@ bool BaseApp::loadScene(const std::string& path)
 			}
 		}
 		else if (token == "END_ACTOR") {
-			currentActor = EU::TSharedPointer<Actor>();
+			currentEntity = ECS::NULL_ENTITY;
 		}
 		else if (token == "END_SCENE") {
 			break;

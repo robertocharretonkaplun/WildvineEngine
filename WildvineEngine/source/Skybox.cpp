@@ -15,8 +15,8 @@ Skybox::init(Device& device, DeviceContext* deviceContext, Texture& cubemap) {
 	// Cargar el cubemap
 	m_skyboxTexture = &cubemap;
 
-	// 1) Geometría (cubo)
-	 // Cubo unitario centrado en origen. (tamaño no importa si quitas traslación)
+	// 1) Geometrï¿½a (cubo)
+	 // Cubo unitario centrado en origen. (tamaï¿½o no importa si quitas traslaciï¿½n)
 	const SkyboxVertex vertices[] = {
 			{-1,-1,-1}, {-1,+1,-1}, {+1,+1,-1}, {+1,-1,-1}, // back
 			{-1,-1,+1}, {-1,+1,+1}, {+1,+1,+1}, {+1,-1,+1}, // front
@@ -38,25 +38,26 @@ Skybox::init(Device& device, DeviceContext* deviceContext, Texture& cubemap) {
 		4,0,3, 4,3,7
 	};
 
-	// Load Model
-	m_skybox = EU::MakeShared<Actor>(device);
-
-	if (!m_skybox.isNull()) {
-		// Crear vertex buffer y index buffer para el skybox
-		std::vector<MeshComponent> skybox;
-		m_cubeModel = new Model3D("Skybox", vertices, indices);
-
-		skybox = m_cubeModel->GetMeshes();
-
-		// No texture loading
-
-		m_skybox->setMesh(device, skybox);
-		m_skybox->setName("skybox");
-	}
-	else {
-		ERROR("Skybox", "Init", "Failed to create Skybox Actor.");
+	// Crear vertex buffer y index buffer para el skybox
+	m_cubeModel = new Model3D("Skybox", vertices, indices);
+	const std::vector<MeshComponent>& skyboxMeshes = m_cubeModel->GetMeshes();
+	if (skyboxMeshes.empty()) {
+		ERROR("Skybox", "Init", "Failed to create Skybox cube mesh.");
 		return E_FAIL;
 	}
+
+	const MeshComponent& cubeMesh = skyboxMeshes.front();
+	HRESULT bufferHr = m_vertexBuffer.init(device, cubeMesh, D3D11_BIND_VERTEX_BUFFER);
+	if (FAILED(bufferHr)) {
+		ERROR("Skybox", "Init", "Failed to create Skybox vertex buffer.");
+		return bufferHr;
+	}
+	bufferHr = m_indexBuffer.init(device, cubeMesh, D3D11_BIND_INDEX_BUFFER);
+	if (FAILED(bufferHr)) {
+		ERROR("Skybox", "Init", "Failed to create Skybox index buffer.");
+		return bufferHr;
+	}
+	m_indexCount = cubeMesh.m_numIndex;
 
 
 	// Define the input layout
@@ -105,7 +106,7 @@ Skybox::init(Device& device, DeviceContext* deviceContext, Texture& cubemap) {
 }
 
 void Skybox::update(DeviceContext& deviceContext, Camera& camera) {
-	// 2) View sin traslación + VP (SOLO una transpuesta al final)
+	// 2) View sin traslaciï¿½n + VP (SOLO una transpuesta al final)
 	XMMATRIX viewNoT = camera.GetViewNoTranslation();
 	XMMATRIX vp = viewNoT * camera.getProj();
 	CBSkybox cb{};
@@ -115,7 +116,7 @@ void Skybox::update(DeviceContext& deviceContext, Camera& camera) {
 
 void
 Skybox::render(DeviceContext& deviceContext) {
-	// Guard: si no se inicializó bien, no intentes renderizar
+	// Guard: si no se inicializï¿½ bien, no intentes renderizar
 	if (!m_cubeModel || !m_skyboxTexture || !m_skyboxTexture->m_textureFromImg) return;
 
 	// 1) States del skybox
@@ -128,11 +129,14 @@ Skybox::render(DeviceContext& deviceContext) {
 	m_shaderProgram.render(deviceContext);
 	m_samplerState.render(deviceContext, 10, 1);
 
-	// 4) IMPORTANTÍSIMO: bindea cubemap ANTES del draw (slot 10)
+	// 4) IMPORTANTï¿½SIMO: bindea cubemap ANTES del draw (slot 10)
 	m_skyboxTexture->render(deviceContext, 10, 1);
 
 	// 5) Asegura IA (topology + VB/IB) antes del DrawIndexed
-	m_skybox->renderForSkybox(deviceContext);
+	deviceContext.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_vertexBuffer.render(deviceContext, 0, 1);
+	m_indexBuffer.render(deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
+	deviceContext.DrawIndexed(m_indexCount, 0, 0);
 
 	// 5) Unbind t10
 	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
@@ -144,10 +148,9 @@ Skybox::render(DeviceContext& deviceContext) {
 
 void
 Skybox::destroy() {
-	if (!m_skybox.isNull()) {
-		m_skybox->destroy();
-		m_skybox.reset();
-	}
+	m_vertexBuffer.destroy();
+	m_indexBuffer.destroy();
+	m_indexCount = 0;
 
 	delete m_cubeModel;
 	m_cubeModel = nullptr;

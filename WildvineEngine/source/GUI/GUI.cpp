@@ -9,9 +9,11 @@
 #include "Device.h"
 #include "DeviceContext.h"
 #include "MeshComponent.h"
-#include "ECS\Actor.h"
-#include "ECS\LightComponent.h"
-#include "ECS\MeshRendererComponent.h"
+#include "FixedECS\ECS.h"
+#include "Components\Transform.h"
+#include "Components\LightComponent.h"
+#include "Components\MeshRendererComponent.h"
+#include "Components\NameComponent.h"
 #include "Rendering\Mesh.h"
 #include "Rendering\Material.h"
 #include "Rendering\MaterialInstance.h"
@@ -251,38 +253,49 @@ void DrawPropertyToggle(const char* label, const char* id, bool* value) {
 	ImGui::PopStyleVar();
 }
 
-const char* GetActorTypeLabel(EU::TSharedPointer<Actor> actor) {
-	if (actor.isNull()) {
+bool IsValidEntity(ECS::Registry& registry, ECS::EntityID entity) {
+	return entity != ECS::NULL_ENTITY && registry.IsAlive(entity);
+}
+
+std::string GetEntityName(ECS::Registry& registry, ECS::EntityID entity) {
+	if (!IsValidEntity(registry, entity)) {
+		return "Actor";
+	}
+	NameComponent* nameComponent = registry.TryGetComponent<NameComponent>(entity);
+	return nameComponent ? nameComponent->name : "Actor";
+}
+
+const char* GetActorTypeLabel(ECS::Registry& registry, ECS::EntityID entity) {
+	if (!IsValidEntity(registry, entity)) {
 		return "Actor";
 	}
 
-	auto lightComponent = actor->getComponent<LightComponent>();
-	if (!lightComponent.isNull()) {
+	auto* lightComponent = registry.TryGetComponent<LightComponent>(entity);
+	if (lightComponent) {
 		return GetLightTypeLabel(lightComponent->getLightData().type);
 	}
 
-	if (!actor->getComponent<MeshRendererComponent>().isNull()) {
+	if (registry.TryGetComponent<MeshRendererComponent>(entity)) {
 		return "Static Mesh Actor";
 	}
 
-	if (!actor->getComponent<Transform>().isNull()) {
+	if (registry.TryGetComponent<Transform>(entity)) {
 		return "Empty Actor";
 	}
 
 	return "Actor";
 }
 
-ImVec4 GetActorTypeColor(EU::TSharedPointer<Actor> actor) {
-	if (actor.isNull()) {
+ImVec4 GetActorTypeColor(ECS::Registry& registry, ECS::EntityID entity) {
+	if (!IsValidEntity(registry, entity)) {
 		return ImVec4(0.45f, 0.47f, 0.52f, 1.0f);
 	}
 
-	auto lightComponent = actor->getComponent<LightComponent>();
-	if (!lightComponent.isNull()) {
+	if (registry.TryGetComponent<LightComponent>(entity)) {
 		return ImVec4(0.92f, 0.68f, 0.22f, 1.0f);
 	}
 
-	if (!actor->getComponent<MeshRendererComponent>().isNull()) {
+	if (registry.TryGetComponent<MeshRendererComponent>(entity)) {
 		return ImVec4(0.24f, 0.50f, 0.92f, 1.0f);
 	}
 
@@ -696,9 +709,9 @@ GUI::closeApp() {
 }
 
 void
-GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
+GUI::inspectorGeneral(ECS::Registry& registry, ECS::EntityID entity) {
 	ImGui::Begin("Inspector");
-	if (actor.isNull()) {
+	if (!IsValidEntity(registry, entity)) {
 		ImGui::Dummy(ImVec2(0.0f, 12.0f));
 		ImGui::TextDisabled("No actor selected");
 		ImGui::TextWrapped("Select an actor in the Hierarchy to inspect transforms, materials, lights and renderer data.");
@@ -707,20 +720,20 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	}
 
 	static char objectName[128] = {};
-	static Actor* cachedActor = nullptr;
-	if (cachedActor != actor.get()) {
-		cachedActor = actor.get();
-		strncpy_s(objectName, actor->getName().c_str(), _TRUNCATE);
+	static ECS::EntityID cachedEntity = ECS::NULL_ENTITY;
+	if (cachedEntity != entity) {
+		cachedEntity = entity;
+		strncpy_s(objectName, GetEntityName(registry, entity).c_str(), _TRUNCATE);
 	}
 
-	auto meshRenderer = actor->getComponent<MeshRendererComponent>();
-	auto lightComponent = actor->getComponent<LightComponent>();
-	auto transform = actor->getComponent<Transform>();
-	const bool hasMeshRenderer = !meshRenderer.isNull();
-	const bool hasLightComponent = !lightComponent.isNull();
-	const bool hasTransform = !transform.isNull();
-	const ImVec4 accentColor = GetActorTypeColor(actor);
-	const char* actorTypeLabel = GetActorTypeLabel(actor);
+	auto* meshRenderer = registry.TryGetComponent<MeshRendererComponent>(entity);
+	auto* lightComponent = registry.TryGetComponent<LightComponent>(entity);
+	auto* transform = registry.TryGetComponent<Transform>(entity);
+	const bool hasMeshRenderer = meshRenderer != nullptr;
+	const bool hasLightComponent = lightComponent != nullptr;
+	const bool hasTransform = transform != nullptr;
+	const ImVec4 accentColor = GetActorTypeColor(registry, entity);
+	const char* actorTypeLabel = GetActorTypeLabel(registry, entity);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
 	ImGui::BeginChild("##InspectorHeader", ImVec2(0.0f, 104.0f), true);
@@ -735,7 +748,7 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	ImGui::TextDisabled("| %s", actorTypeLabel);
 	ImGui::SetNextItemWidth(-1.0f);
 	if (ImGui::InputText("##ObjectName", objectName, IM_ARRAYSIZE(objectName))) {
-		actor->setName(objectName);
+		registry.SetComponent<NameComponent>(entity, NameComponent(objectName));
 	}
 	ImGui::Spacing();
 	DrawInspectorComponentChips(hasTransform, hasMeshRenderer, hasLightComponent);
@@ -747,7 +760,8 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 	ImGui::Spacing();
 	if (BeginInspectorSection("Identity")) {
 		if (BeginInspectorPropertyTable("##IdentityProperties")) {
-			DrawPropertyValueText("Name", actor->getName().c_str());
+			const std::string entityName = GetEntityName(registry, entity);
+			DrawPropertyValueText("Name", entityName.c_str());
 			DrawPropertyValueText("Type", actorTypeLabel);
 			DrawPropertyValueBool("Transform", hasTransform);
 			DrawPropertyValueBool("Renderer", hasMeshRenderer);
@@ -758,7 +772,7 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 
 	ImGui::Spacing();
 	if (hasTransform && BeginInspectorSection("Transform")) {
-		inspectorContainer(actor);
+		inspectorContainer(registry, entity);
 	}
 
 	if (hasMeshRenderer) {
@@ -906,18 +920,20 @@ GUI::inspectorGeneral(EU::TSharedPointer<Actor> actor) {
 }
 
 void
-GUI::inspectorContainer(EU::TSharedPointer<Actor> actor) {
-	//ImGui::Begin("Transform");
-	// Draw the structure
-	vec3Control("Position", const_cast<float*>(actor->getComponent<Transform>()->getPosition().data()), 0.0f, 78.0f, false);
-	vec3Control("Rotation", const_cast<float*>(actor->getComponent<Transform>()->getRotation().data()), 0.0f, 78.0f, true);
-	vec3Control("Scale", const_cast<float*>(actor->getComponent<Transform>()->getScale().data()), 1.0f, 78.0f, false);
+GUI::inspectorContainer(ECS::Registry& registry, ECS::EntityID entity) {
+	Transform* transform = registry.TryGetComponent<Transform>(entity);
+	if (!transform) {
+		return;
+	}
 
-	//ImGui::End();
+	// Draw the structure
+	vec3Control("Position", const_cast<float*>(transform->getPosition().data()), 0.0f, 78.0f, false);
+	vec3Control("Rotation", const_cast<float*>(transform->getRotation().data()), 0.0f, 78.0f, true);
+	vec3Control("Scale", const_cast<float*>(transform->getScale().data()), 1.0f, 78.0f, false);
 }
 
-void 
-GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
+void
+GUI::outliner(ECS::Registry& registry, const std::vector<ECS::EntityID>& entities) {
 	ImGui::Begin("Hierarchy");
 
 	ImGui::TextDisabled("Scene");
@@ -926,24 +942,23 @@ GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 
 	ImGui::Separator();
 
-	if (selectedActorIndex >= static_cast<int>(actors.size())) {
-		selectedActorIndex = actors.empty() ? -1 : static_cast<int>(actors.size()) - 1;
+	if (selectedActorIndex >= static_cast<int>(entities.size())) {
+		selectedActorIndex = entities.empty() ? -1 : static_cast<int>(entities.size()) - 1;
 	}
 
-	for (int i = 0; i < static_cast<int>(actors.size()); ++i) {
-		const auto& actor = actors[i];
-		std::string actorName = actor ? actor->getName() : "Actor";
-		const char* actorTypeLabel = GetActorTypeLabel(actor);
-		ImVec4 actorTypeColor = GetActorTypeColor(actor);
+	for (int i = 0; i < static_cast<int>(entities.size()); ++i) {
+		const ECS::EntityID entity = entities[i];
+		std::string actorName = GetEntityName(registry, entity);
+		const char* actorTypeLabel = GetActorTypeLabel(registry, entity);
+		ImVec4 actorTypeColor = GetActorTypeColor(registry, entity);
 		std::string filterLabel = actorName + " " + actorTypeLabel;
 		if (!filter.PassFilter(filterLabel.c_str())) {
 			continue;
 		}
 
-		auto meshRenderer = actor ? actor->getComponent<MeshRendererComponent>() : EU::TSharedPointer<MeshRendererComponent>();
-		auto lightComponent = actor ? actor->getComponent<LightComponent>() : EU::TSharedPointer<LightComponent>();
-		const bool hasMeshRenderer = !meshRenderer.isNull();
-		const bool hasLightComponent = !lightComponent.isNull();
+		const bool isValid = IsValidEntity(registry, entity);
+		const bool hasMeshRenderer = isValid && registry.TryGetComponent<MeshRendererComponent>(entity) != nullptr;
+		const bool hasLightComponent = isValid && registry.TryGetComponent<LightComponent>(entity) != nullptr;
 
 		ImGui::PushID(i);
 		const bool isSelected = (selectedActorIndex == i);
@@ -984,7 +999,7 @@ GUI::outliner(const std::vector<EU::TSharedPointer<Actor>>& actors) {
 	ImGui::End();
 }
 
-void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> actor)
+void GUI::editTransform(Camera& cam, Window& window, ECS::Registry& registry, ECS::EntityID entity)
 {
 	(void)window;
 	if (!m_viewportVisibleThisFrame) return;
@@ -992,9 +1007,9 @@ void GUI::editTransform(Camera& cam, Window& window, EU::TSharedPointer<Actor> a
 		m_isUsingGizmo = false;
 		return;
 	}
-	if (actor.isNull()) return;
-	auto transform = actor->getComponent<Transform>();
-	if (transform.isNull()) return;
+	if (!IsValidEntity(registry, entity)) return;
+	Transform* transform = registry.TryGetComponent<Transform>(entity);
+	if (!transform) return;
 
 	float rectX = m_viewportPos.x;
 	float rectY = m_viewportPos.y;
@@ -1407,10 +1422,11 @@ void GUI::drawStudioTopRibbon()
 }
 
 void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
-	const std::vector<EU::TSharedPointer<Actor>>& actors,
+	ECS::Registry& registry,
+	const std::vector<ECS::EntityID>& entities,
 	Camera& camera,
 	Window& window,
-	EU::TSharedPointer<Actor> selectedActor,
+	ECS::EntityID selectedEntity,
 	ID3D11ShaderResourceView* lightIconSRV)
 {
 	(void)window;
@@ -1466,21 +1482,22 @@ void GUI::drawViewportPanel(ID3D11ShaderResourceView* viewportSRV,
 
 		ImDrawList* gizmoDrawList = m_viewportDrawList;
 		m_viewportDrawList = ImGui::GetForegroundDrawList();
-		drawLightIcons(actors, camera, selectedActor, lightIconSRV);
+		drawLightIcons(registry, entities, camera, selectedEntity, lightIconSRV);
 		m_viewportDrawList = gizmoDrawList;
-		editTransform(camera, window, selectedActor);
+		editTransform(camera, window, registry, selectedEntity);
 	}
 	ImGui::End();
 
 	ImGui::PopStyleVar();
 }
 
-void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
+void GUI::drawLightIcons(ECS::Registry& registry,
+	const std::vector<ECS::EntityID>& entities,
 	Camera& camera,
-	EU::TSharedPointer<Actor> selectedActor,
+	ECS::EntityID selectedEntity,
 	ID3D11ShaderResourceView* lightIconSRV)
 {
-	(void)selectedActor;
+	(void)selectedEntity;
 	if (!m_editorGizmosVisible) {
 		return;
 	}
@@ -1493,18 +1510,18 @@ void GUI::drawLightIcons(const std::vector<EU::TSharedPointer<Actor>>& actors,
 
 	m_viewportDrawList->PushClipRect(m_viewportPos, clipMax, true);
 
-	for (const auto& actor : actors) {
-		if (actor.isNull()) {
+	for (const ECS::EntityID entity : entities) {
+		if (!IsValidEntity(registry, entity)) {
 			continue;
 		}
 
-		auto lightComponent = actor->getComponent<LightComponent>();
-		if (lightComponent.isNull()) {
+		auto* lightComponent = registry.TryGetComponent<LightComponent>(entity);
+		if (!lightComponent) {
 			continue;
 		}
 
-		auto transform = actor->getComponent<Transform>();
-		if (transform.isNull()) {
+		auto* transform = registry.TryGetComponent<Transform>(entity);
+		if (!transform) {
 			continue;
 		}
 
@@ -1548,7 +1565,8 @@ void GUI::drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
 	ID3D11ShaderResourceView* normalRoughnessSRV,
 	ID3D11ShaderResourceView* worldAoSRV,
 	ID3D11ShaderResourceView* emissiveAlphaSRV,
-	EU::TSharedPointer<Actor> selectedActor)
+	ECS::Registry& registry,
+	ECS::EntityID selectedEntity)
 {
 	GBufferChannelItem renderItems[] = {
 		{ "Final Render", "Rendered viewport output", m_renderDebugFinalSRV, m_renderDebugFinalSRV, 0, 0 },
@@ -1559,8 +1577,8 @@ void GUI::drawGBufferDebugPanel(ID3D11ShaderResourceView* albedoMetallicSRV,
 	MaterialInstance* selectedMaterial = nullptr;
 	int materialSlotCount = 0;
 	static int selectedMaterialSlot = 0;
-	if (!selectedActor.isNull()) {
-		EU::TSharedPointer<MeshRendererComponent> meshRenderer = selectedActor->getComponent<MeshRendererComponent>();
+	if (IsValidEntity(registry, selectedEntity)) {
+		MeshRendererComponent* meshRenderer = registry.TryGetComponent<MeshRendererComponent>(selectedEntity);
 		if (meshRenderer) {
 			const std::vector<MaterialInstance*>& materialInstances = meshRenderer->getMaterialInstances();
 			materialSlotCount = static_cast<int>(materialInstances.size());

@@ -5,87 +5,82 @@
  */
 #include "SceneGraph\SceneGraph.h"
 #include "SceneGraph\HierarchyComponent.h"
-#include "ECS\Entity.h"
-#include "ECS\Transform.h"
-#include "ECS\LightComponent.h"
-#include "ECS\MeshRendererComponent.h"
-#include "DeviceContext.h"
+#include "FixedECS\ECS.h"
+#include "Components\Transform.h"
+#include "Components\LightComponent.h"
+#include "Components\MeshRendererComponent.h"
 #include "EngineUtilities/Utilities/Camera.h"
 #include "Rendering/Material.h"
 #include "Rendering/MaterialInstance.h"
 #include "Rendering/Mesh.h"
 #include "Rendering/RenderScene.h"
 
-void SceneGraph::init() {
+void SceneGraph::init(ECS::Registry& registry) {
+	m_registry = &registry;
 	m_entities.clear();
 }
 
 void SceneGraph::destroy() {
-	for (Entity* e : m_entities)
-	{
-		if (!e) continue;
-		auto h = e->getComponent<HierarchyComponent>();
-		if (h)
+	if (m_registry) {
+		for (ECS::EntityID e : m_entities)
 		{
-			h->m_parent = nullptr;
-			h->m_children.clear();
+			if (!m_registry->IsAlive(e)) continue;
+			auto* h = m_registry->TryGetComponent<HierarchyComponent>(e);
+			if (h)
+			{
+				h->m_parent = ECS::NULL_ENTITY;
+				h->m_children.clear();
+			}
 		}
 	}
 
 	m_entities.clear();
 }
 
-void 
-SceneGraph::addEntity(Entity* e) {
-	if (!e) {
+void
+SceneGraph::addEntity(ECS::EntityID e) {
+	if (!m_registry || !m_registry->IsAlive(e)) {
 		return;
 	}
 	if (isRegistered(e)) {
 		return;
 	}
 
-	//	// Validar que existen los componentes minimos
-	if (!e->getComponent<Transform>()) {
-		e->addComponent(EU::MakeShared<Transform>());
-		e->getComponent<Transform>()->init();
+	// Validar que existen los componentes minimos
+	if (!m_registry->HasComponent<Transform>(e)) {
+		m_registry->AddComponent<Transform>(e);
 	}
-	if (!e->getComponent<HierarchyComponent>()) {
-		e->addComponent(EU::MakeShared<HierarchyComponent>());
-		e->getComponent<HierarchyComponent>()->init();
+	if (!m_registry->HasComponent<HierarchyComponent>(e)) {
+		m_registry->AddComponent<HierarchyComponent>(e);
 	}
 
 	m_entities.push_back(e);
 }
 
-void 
-SceneGraph::removeEntity(Entity* e) {
-	if (!e) return;
+void
+SceneGraph::removeEntity(ECS::EntityID e) {
+	if (!m_registry) return;
 	if (!isRegistered(e)) return;
 
 	// 1) Detach de su padre (si tiene)
 	detach(e);
 
-	// 2) Reparent de hijos a null (roots) o detach total
-	auto h = e->getComponent<HierarchyComponent>();
+	// 2) Reparent de hijos a null (roots)
+	auto* h = m_registry->TryGetComponent<HierarchyComponent>(e);
 	if (h)
 	{
 		// Copia local para no invalidar mientras iteras
 		auto childrenCopy = h->m_children;
-		for (Entity* c : childrenCopy)
+		for (ECS::EntityID c : childrenCopy)
 		{
-			if (!c) continue;
+			if (!m_registry->IsAlive(c)) continue;
 			// detach del padre (que es e)
-			auto hc = c->getComponent<HierarchyComponent>();
+			auto* hc = m_registry->TryGetComponent<HierarchyComponent>(c);
 			if (hc && hc->m_parent == e)
-				hc->m_parent = nullptr;
+				hc->m_parent = ECS::NULL_ENTITY;
 
 			// quitar referencia en e
 			h->removeChild(c);
-
-			// marcar dirty para recalcular world
-			auto wt = c->getComponent<Transform>();
-			//if (wt) wt->dirty = true;
-			//markWorldDirtyRecursive(wt);
 		}
 
 		h->m_children.clear();
@@ -95,44 +90,44 @@ SceneGraph::removeEntity(Entity* e) {
 	m_entities.erase(std::remove(m_entities.begin(), m_entities.end(), e), m_entities.end());
 }
 
-bool 
-SceneGraph::isAncestor(Entity* possibleAncestor, Entity* node) const {
+bool
+SceneGraph::isAncestor(ECS::EntityID possibleAncestor, ECS::EntityID node) const {
 	// Recorre hacia arriba desde node: si encuentra possibleAncestor, hay ciclo
-	if (!possibleAncestor || !node) return false;
+	if (!m_registry) return false;
+	if (possibleAncestor == ECS::NULL_ENTITY || node == ECS::NULL_ENTITY) return false;
 
-	auto h = node->getComponent<HierarchyComponent>();
-	while (h && h->m_parent)
+	auto* h = m_registry->TryGetComponent<HierarchyComponent>(node);
+	while (h && h->m_parent != ECS::NULL_ENTITY)
 	{
 		if (h->m_parent == possibleAncestor) return true;
 		node = h->m_parent;
-		EU::TSharedPointer<HierarchyComponent> h;
-		if (node)
-			h = node->getComponent<HierarchyComponent>();
-
+		h = m_registry->IsAlive(node)
+			? m_registry->TryGetComponent<HierarchyComponent>(node)
+			: nullptr;
 	}
 	return false;
 }
 
 bool
-SceneGraph::isRoot(Entity* e) const {
-	
-	if (!e) return false;
-	auto h = e->getComponent<HierarchyComponent>();
-	return (!h || h->m_parent == nullptr);
+SceneGraph::isRoot(ECS::EntityID e) const {
+	if (!m_registry || !m_registry->IsAlive(e)) return false;
+	auto* h = m_registry->TryGetComponent<HierarchyComponent>(e);
+	return (!h || h->m_parent == ECS::NULL_ENTITY);
 }
 
-bool 
-SceneGraph::isRegistered(Entity* e) const {
+bool
+SceneGraph::isRegistered(ECS::EntityID e) const {
 	return std::find(m_entities.begin(), m_entities.end(), e) != m_entities.end();
 }
 
-bool 
-SceneGraph::attach(Entity* child, Entity* parent)
+bool
+SceneGraph::attach(ECS::EntityID child, ECS::EntityID parent)
 {
-	if (!child || !parent) return false;
+	if (!m_registry) return false;
+	if (child == ECS::NULL_ENTITY || parent == ECS::NULL_ENTITY) return false;
 	if (child == parent) return false;
 
-	// Registro automático
+	// Registro automatico
 	addEntity(child);
 	addEntity(parent);
 
@@ -142,49 +137,51 @@ SceneGraph::attach(Entity* child, Entity* parent)
 	// Si child ya tiene padre, detach
 	detach(child);
 
-	auto hc = child->getComponent<HierarchyComponent>();
-	auto hp = parent->getComponent<HierarchyComponent>();
+	auto* hc = m_registry->TryGetComponent<HierarchyComponent>(child);
+	auto* hp = m_registry->TryGetComponent<HierarchyComponent>(parent);
 	if (!hc || !hp) return false;
 
 	hc->m_parent = parent;
 	hp->addChild(child);
 
-	//markWorldDirtyRecursive(wt);
 	return true;
 }
 
-bool 
-SceneGraph::detach(Entity* child) {
-	if (!child) return false;
+bool
+SceneGraph::detach(ECS::EntityID child) {
+	if (!m_registry || child == ECS::NULL_ENTITY) return false;
 
-	auto hc = child->getComponent<HierarchyComponent>();
+	auto* hc = m_registry->TryGetComponent<HierarchyComponent>(child);
 	if (!hc) return false;
 
-	Entity* parent = hc->m_parent;
-	if (!parent) return true; // ya estaba root
+	ECS::EntityID parent = hc->m_parent;
+	if (parent == ECS::NULL_ENTITY) return true; // ya estaba root
 
-	auto hp = parent->getComponent<HierarchyComponent>();
-	if (hp) hp->removeChild(child);
+	if (m_registry->IsAlive(parent)) {
+		auto* hp = m_registry->TryGetComponent<HierarchyComponent>(parent);
+		if (hp) hp->removeChild(child);
+	}
 
-	hc->m_parent = nullptr;
+	hc->m_parent = ECS::NULL_ENTITY;
 
-	//markWorldDirtyRecursive(wt);
 	return true;
 }
 
 void
-SceneGraph::update(float deltaTime, DeviceContext& deviceContext) {
-	// Actualiza todas las entidades
-	for (Entity* e : m_entities)
-	{
-		if (!e) continue;
-		e->update(deltaTime, deviceContext);
-	}
+SceneGraph::update(float deltaTime) {
+	(void)deltaTime;
+	if (!m_registry) return;
 
-	// 2) Propagación World: procesa roots
-	for (Entity* e : m_entities)
+	// 1) Recompone matrices locales de todas las entidades con Transform
+	m_registry->GetView<Transform>().Each(
+		[](ECS::EntityID, Transform& t) {
+			t.updateMatrix();
+		});
+
+	// 2) Propagacion World: procesa roots
+	for (ECS::EntityID e : m_entities)
 	{
-		if (!e) continue;
+		if (!m_registry->IsAlive(e)) continue;
 		if (isRoot(e))
 		{
 			updateWorldRecursive(e, XMMatrixIdentity());
@@ -192,46 +189,40 @@ SceneGraph::update(float deltaTime, DeviceContext& deviceContext) {
 	}
 }
 
-void 
-SceneGraph::updateWorldRecursive(Entity* node, const XMMATRIX& parentWorld) {
-	auto t = node->getComponent<Transform>();
-	// Dirty Matrix?
-	auto h = node->getComponent<HierarchyComponent>();
+void
+SceneGraph::updateWorldRecursive(ECS::EntityID node, const XMMATRIX& parentWorld) {
+	auto* t = m_registry->TryGetComponent<Transform>(node);
+	auto* h = m_registry->TryGetComponent<HierarchyComponent>(node);
 
 	if (!t || !h) {
 		return;
 	}
-	// Tu Transform::matrix es LOCAL (S*R*T)
+	// Transform::matrix es LOCAL (S*R*T)
 	// World = Local * ParentWorld
 	auto worldMatrix = t->matrix * parentWorld;
 	t->worldMatrix = worldMatrix;
 
-	for (Entity* c : h->m_children) {
+	for (ECS::EntityID c : h->m_children) {
+		if (m_registry->IsAlive(c)) {
 			updateWorldRecursive(c, worldMatrix);
-	}
-}
-
-void SceneGraph::render(DeviceContext& deviceContext) {
-	// Render all entities
-	for (auto& e : m_entities) {
-		if (e) {
-			e->render(deviceContext);
 		}
 	}
 }
 
 void
 SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
-	for (Entity* entity : m_entities)
+	if (!m_registry) return;
+
+	for (ECS::EntityID entity : m_entities)
 	{
-		if (!entity) {
+		if (!m_registry->IsAlive(entity)) {
 			continue;
 		}
 
-		auto lightComponent = entity->getComponent<LightComponent>();
+		auto* lightComponent = m_registry->TryGetComponent<LightComponent>(entity);
 		if (lightComponent) {
 			LightData lightData = lightComponent->getLightData();
-			auto transform = entity->getComponent<Transform>();
+			auto* transform = m_registry->TryGetComponent<Transform>(entity);
 			if (transform) {
 				XMFLOAT4X4 worldMatrix{};
 				XMStoreFloat4x4(&worldMatrix, transform->worldMatrix);
@@ -248,8 +239,8 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 			outScene.directionalLights.push_back(lightData);
 		}
 
-		auto meshRenderer = entity->getComponent<MeshRendererComponent>();
-		auto transform = entity->getComponent<Transform>();
+		auto* meshRenderer = m_registry->TryGetComponent<MeshRendererComponent>(entity);
+		auto* transform = m_registry->TryGetComponent<Transform>(entity);
 		if (!meshRenderer || !transform || !meshRenderer->isVisible()) {
 			continue;
 		}
@@ -308,6 +299,3 @@ SceneGraph::gatherRenderScene(RenderScene& outScene, const Camera& camera) {
 		}
 	}
 }
-
-
-

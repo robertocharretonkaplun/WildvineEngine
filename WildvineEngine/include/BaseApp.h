@@ -18,15 +18,17 @@
 #include "Buffer.h"
 #include "SamplerState.h"
 #include "Model3D.h"
-#include "ECS/Actor.h"
+#include "FixedECS/ECS.h"
+#include "Components/Transform.h"
+#include "Components/LightComponent.h"
+#include "Components/MeshRendererComponent.h"
+#include "Components/NameComponent.h"
 #include "EngineUtilities\GUI/GUI.h"
 #include "SceneGraph\SceneGraph.h"
 #include "EngineUtilities\Utilities\Camera.h"
 #include "EngineUtilities\Utilities\Skybox.h"
 #include "EngineUtilities\Utilities\LayoutBuilder.h"
 #include "EngineUtilities/Utilities/EditorViewportPass.h"
-#include "ECS/LightComponent.h"
-#include "ECS/MeshRendererComponent.h"
 #include "Rendering/Material.h"
 #include "Rendering/MaterialInstance.h"
 #include "Rendering/Mesh.h"
@@ -124,7 +126,8 @@ public:
 	 */
 	std::string getDefaultScenePath() const;
 private:
-	EU::TSharedPointer<Actor> createLightActor(const std::string& name = std::string());
+	ECS::EntityID createEntity(const std::string& name);
+	ECS::EntityID createLightActor(const std::string& name = std::string());
 
 	static LRESULT CALLBACK 
 	WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -174,12 +177,13 @@ private:
 
 	Camera															m_camera;
 
+	ECS::Registry											m_registry;
 	SceneGraph												m_sceneGraph;
-	std::vector<EU::TSharedPointer<Actor>> m_actors;
-	EU::TSharedPointer<Actor> m_cyberGun;
-	EU::TSharedPointer<Actor> m_drakefirePistol;
-	EU::TSharedPointer<Actor> m_sciFiToad;
-	EU::TSharedPointer<Actor> m_directionalLightActor;
+	std::vector<ECS::EntityID> m_entities;
+	ECS::EntityID m_cyberGun = ECS::NULL_ENTITY;
+	ECS::EntityID m_drakefirePistol = ECS::NULL_ENTITY;
+	ECS::EntityID m_sciFiToad = ECS::NULL_ENTITY;
+	ECS::EntityID m_directionalLightActor = ECS::NULL_ENTITY;
 
 	
 	Model3D*														m_model = nullptr;

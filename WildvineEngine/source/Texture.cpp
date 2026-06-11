@@ -420,7 +420,7 @@ Texture::CreateCubemap(Device& device,
       return hr;
     }
 
-    UINT mipCount = 1 + (UINT)floor(log2(max(width, height)));
+    UINT mipCount = 1 + (UINT)floor(log2((width > height) ? width : height));
 
     for (UINT face = 0; face < 6; ++face)
     {

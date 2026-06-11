@@ -101,9 +101,6 @@
     <ClCompile Include="source\Model3D.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="source\ECS\Actor.cpp">
-      <Filter>source\ECS</Filter>
-    </ClCompile>
     <ClCompile Include="source\GUI\GUI.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -216,16 +213,37 @@
     <ClInclude Include="include\IResource.h">
       <Filter>include\Patterns</Filter>
     </ClInclude>
-    <ClInclude Include="include\ECS\Component.h">
+    <ClInclude Include="include\Components\LightComponent.h">
       <Filter>include\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="include\ECS\LightComponent.h">
+    <ClInclude Include="include\Components\MeshRendererComponent.h">
       <Filter>include\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="include\ECS\MeshRendererComponent.h">
+    <ClInclude Include="include\Components\NameComponent.h">
       <Filter>include\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="include\ECS\Entity.h">
+    <ClInclude Include="include\FixedECS\Types.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\SparseSet.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\ComponentPool.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\View.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\System.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\Registry.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\Serializer.h">
+      <Filter>include\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FixedECS\ECS.h">
       <Filter>include\ECS</Filter>
     </ClInclude>
     <ClInclude Include="include\stb_image.h">
@@ -264,10 +282,7 @@
     <ClInclude Include="include\EngineUtilities\Utilities\EngineMath.h">
       <Filter>include\Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="include\ECS\Actor.h">
-      <Filter>include\ECS</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ECS\Transform.h">
+    <ClInclude Include="include\Components\Transform.h">
       <Filter>include\ECS</Filter>
     </ClInclude>
     <ClInclude Include="include\EngineUtilities\GUI\GUI.h">
