@@ -124,7 +124,7 @@ MaterialParams {
 	float alphaCutoff = 0.5f;
 };
 
-struct
+struct alignas(16)
 CBPerFrame {
 	XMFLOAT4X4 View{};
 	XMFLOAT4X4 Projection{};

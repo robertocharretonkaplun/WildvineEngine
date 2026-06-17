@@ -991,6 +991,7 @@ DeferredRenderer::createGBufferResources(Device& device, unsigned int width, uns
 		return hr;
 	}
 
+
 	hr = createGBufferTarget(device,
 		width,
 		height,
